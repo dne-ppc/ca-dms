@@ -1,0 +1,63 @@
+.custom-toolbar {
+  border: 1px solid #ccc;
+  border-bottom: none;
+  background: #f3f3f3;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-toolbar .ql-formats {
+  margin-right: 8px;
+}
+
+.custom-toolbar .ql-formats:last-child {
+  margin-right: 0;
+}
+
+.placeholder-tools {
+  border-left: 1px solid #ccc;
+  padding-left: 8px;
+  margin-left: 4px;
+}
+
+.ql-placeholder-btn {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 6px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.ql-placeholder-btn:hover {
+  background: #e6e6e6;
+  border-color: #999;
+}
+
+.ql-placeholder-btn:active {
+  background: #d4edda;
+  border-color: #28a745;
+}
+
+.ql-version-table {
+  color: #007bff;
+}
+
+.ql-signature-field {
+  color: #28a745;
+}
+
+.ql-long-response {
+  color: #ffc107;
+}
+
+.ql-line-segment {
+  color: #6c757d;
+  font-family: monospace;
+  font-weight: bold;
+}
