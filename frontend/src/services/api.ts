@@ -28,37 +28,42 @@ class ApiClient {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'API request failed')
+        const error = new Error(data.message || 'API request failed')
+        ;(error as any).status = response.status
+        throw error
       }
 
       return data
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : 'Unknown API error'
-      )
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Unknown API error')
     }
   }
 
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'GET' })
+  async get<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { method: 'GET', ...options })
   }
 
-  async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: unknown, options: RequestInit = {}): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
+      ...options,
     })
   }
 
-  async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, data?: unknown, options: RequestInit = {}): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
+      ...options,
     })
   }
 
-  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'DELETE' })
+  async delete<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { method: 'DELETE', ...options })
   }
 }
 
