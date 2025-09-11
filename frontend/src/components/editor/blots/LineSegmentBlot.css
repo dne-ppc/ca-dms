@@ -1,0 +1,57 @@
+/* Line Segment Blot Styles */
+.ql-line-segment {
+  display: inline-block;
+  border-bottom: 1px solid #000;
+  min-height: 1em;
+  vertical-align: baseline;
+  margin: 0 2px;
+  cursor: pointer;
+}
+
+/* Length-specific styles */
+.ql-line-segment.length-short {
+  width: 144px; /* 2 inches at 72 DPI */
+}
+
+.ql-line-segment.length-medium {
+  width: 288px; /* 4 inches at 72 DPI */
+}
+
+.ql-line-segment.length-long {
+  width: 432px; /* 6 inches at 72 DPI */
+}
+
+/* Hover effect for better UX */
+.ql-line-segment:hover {
+  border-bottom-color: #007acc;
+  background-color: rgba(0, 122, 204, 0.1);
+}
+
+/* Focus state for accessibility */
+.ql-line-segment:focus {
+  outline: 2px solid #007acc;
+  outline-offset: 2px;
+}
+
+/* Responsive behavior - ensure segments don't break layout on small screens */
+@media (max-width: 768px) {
+  .ql-line-segment.length-long {
+    width: min(432px, 80vw);
+  }
+  
+  .ql-line-segment.length-medium {
+    width: min(288px, 60vw);
+  }
+  
+  .ql-line-segment.length-short {
+    width: min(144px, 40vw);
+  }
+}
+
+/* Print styles */
+@media print {
+  .ql-line-segment {
+    border-bottom: 1px solid #000 !important;
+    background-color: transparent !important;
+  }
+}
