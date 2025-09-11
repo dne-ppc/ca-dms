@@ -19,6 +19,61 @@ export interface LineSegmentOption {
   pixels: number
 }
 
+export interface PDFFieldMetadata {
+  fieldId: string
+  fieldType: 'text'
+  fieldSubtype: 'single-line'
+  width: number
+  height: number
+  required: boolean
+  maxLength: number | null
+  placeholder: string
+  fontSize: number
+}
+
+export interface PDFPositioning {
+  placement: 'inline'
+  verticalAlign: 'baseline'
+  marginLeft: number
+  marginRight: number
+  preserveAspectRatio: boolean
+  allowBreaking: boolean
+}
+
+export interface PDFValidationOptions {
+  required: boolean
+  format: 'text'
+  maxLength: number | null
+  pattern: string | null
+  customValidation: boolean
+}
+
+export interface PDFDimensions {
+  width: number
+  height: number
+}
+
+export interface PDFFieldCustomOptions {
+  required?: boolean
+  placeholder?: string
+  maxLength?: number | null
+  fontSize?: number
+}
+
+export interface PDFFieldData {
+  fieldType: string
+  width: number
+  height: number
+  fieldId: string
+  length: 'short' | 'medium' | 'long'
+  positioning: {
+    placement: 'inline'
+    verticalAlign: 'baseline'
+    marginLeft: number
+    marginRight: number
+  }
+}
+
 export class LineSegmentBlot extends Inline {
   static blotName = 'line-segment'
   static tagName = 'span'
@@ -70,6 +125,13 @@ export class LineSegmentBlot extends Inline {
     node.style.display = 'inline-block'
     node.style.minHeight = '1em'
     node.style.verticalAlign = 'baseline'
+    
+    // Add PDF field attributes for form generation
+    const fieldId = this.generateFieldId()
+    node.setAttribute('data-field-type', 'single-line-text')
+    node.setAttribute('data-field-width', pixelWidth.toString())
+    node.setAttribute('data-field-height', this.PDF_FIELD_HEIGHT.toString())
+    node.setAttribute('data-field-id', fieldId)
     
     // Add a non-breaking space for content
     node.innerHTML = '&nbsp;'
@@ -157,6 +219,11 @@ export class LineSegmentBlot extends Inline {
     mobile: 0.8    // 80% of viewport width max
   } as const
 
+  // PDF field constants
+  static readonly PDF_FIELD_HEIGHT = 20 // Standard single-line height in points
+  static readonly PDF_DEFAULT_FONT_SIZE = 12
+  static readonly PDF_FIELD_MARGIN = 2
+
   /**
    * Get responsive breakpoint category for given width
    */
@@ -227,6 +294,100 @@ export class LineSegmentBlot extends Inline {
    */
   static supportsTextWrapping(): boolean {
     return true // Inline-block elements support text wrapping
+  }
+
+  // PDF Field Integration Methods
+  
+  /**
+   * Generate unique field ID for PDF form fields
+   */
+  static generateFieldId(): string {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substr(2, 9)
+    return `line-segment-${timestamp}-${random}`
+  }
+
+  /**
+   * Generate PDF field metadata for line segments
+   */
+  static generatePDFFieldMetadata(
+    data: LineSegmentData, 
+    fieldId: string,
+    customOptions?: PDFFieldCustomOptions
+  ): PDFFieldMetadata {
+    const length = data.length || 'medium'
+    const width = this.LENGTH_CONFIG[length].pixels
+    
+    return {
+      fieldId,
+      fieldType: 'text',
+      fieldSubtype: 'single-line',
+      width,
+      height: this.PDF_FIELD_HEIGHT,
+      required: customOptions?.required || false,
+      maxLength: customOptions?.maxLength || null,
+      placeholder: customOptions?.placeholder || '',
+      fontSize: customOptions?.fontSize || this.PDF_DEFAULT_FONT_SIZE
+    }
+  }
+
+  /**
+   * Get PDF positioning data for inline placement
+   */
+  static getPDFPositioning(data: LineSegmentData): PDFPositioning {
+    return {
+      placement: 'inline',
+      verticalAlign: 'baseline',
+      marginLeft: this.PDF_FIELD_MARGIN,
+      marginRight: this.PDF_FIELD_MARGIN,
+      preserveAspectRatio: true,
+      allowBreaking: false // Don't break line segments across pages
+    }
+  }
+
+  /**
+   * Get PDF form field validation options
+   */
+  static getPDFValidationOptions(): PDFValidationOptions {
+    return {
+      required: false,
+      format: 'text',
+      maxLength: null,
+      pattern: null,
+      customValidation: false
+    }
+  }
+
+  /**
+   * Calculate PDF field dimensions
+   */
+  static getPDFDimensions(length: 'short' | 'medium' | 'long'): PDFDimensions {
+    return {
+      width: this.LENGTH_CONFIG[length].pixels,
+      height: this.PDF_FIELD_HEIGHT
+    }
+  }
+
+  /**
+   * Extract PDF field data from DOM element
+   */
+  static extractPDFFieldData(element: HTMLElement): PDFFieldData {
+    const lengthClass = element.classList.contains('length-short') ? 'short' :
+                       element.classList.contains('length-long') ? 'long' : 'medium'
+    
+    return {
+      fieldType: element.getAttribute('data-field-type') || 'single-line-text',
+      width: parseInt(element.getAttribute('data-field-width') || '288'),
+      height: parseInt(element.getAttribute('data-field-height') || '20'),
+      fieldId: element.getAttribute('data-field-id') || '',
+      length: lengthClass,
+      positioning: {
+        placement: 'inline',
+        verticalAlign: 'baseline',
+        marginLeft: this.PDF_FIELD_MARGIN,
+        marginRight: this.PDF_FIELD_MARGIN
+      }
+    }
   }
 
   // Override methods for proper Quill integration

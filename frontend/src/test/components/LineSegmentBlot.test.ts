@@ -356,4 +356,159 @@ describe('LineSegmentBlot', () => {
       expect(tinyLongWidth).toBeGreaterThanOrEqual(LineSegmentBlot.MIN_SEGMENT_WIDTH)
     })
   })
+
+  // Task 2.3.4: PDF Single-Line Field Integration Tests
+  describe('PDF Field Integration', () => {
+    it('should generate PDF field metadata for line segments', () => {
+      const testData: LineSegmentData = { length: 'medium' }
+      const blot = LineSegmentBlot.create(testData)
+      
+      const pdfMetadata = LineSegmentBlot.generatePDFFieldMetadata(testData, 'field-001')
+      
+      expect(pdfMetadata).toEqual({
+        fieldId: 'field-001',
+        fieldType: 'text',
+        fieldSubtype: 'single-line',
+        width: 288,
+        height: 20, // Standard single-line height
+        required: false,
+        maxLength: null,
+        placeholder: '',
+        fontSize: 12
+      })
+    })
+
+    it('should add PDF field attributes to DOM elements', () => {
+      const testData: LineSegmentData = { length: 'short' }
+      const blot = LineSegmentBlot.create(testData)
+      
+      // Should have data-field-type attribute
+      expect(blot.getAttribute('data-field-type')).toBe('single-line-text')
+      
+      // Should have data-field-width attribute matching segment width
+      expect(blot.getAttribute('data-field-width')).toBe('144')
+      
+      // Should have data-field-height for PDF generation
+      expect(blot.getAttribute('data-field-height')).toBe('20')
+      
+      // Should have unique field ID
+      const fieldId = blot.getAttribute('data-field-id')
+      expect(fieldId).toBeTruthy()
+      expect(fieldId).toMatch(/^line-segment-\d+-\w+$/)
+    })
+
+    it('should handle different field widths for different segment lengths', () => {
+      const shortMeta = LineSegmentBlot.generatePDFFieldMetadata({ length: 'short' }, 'short-1')
+      const mediumMeta = LineSegmentBlot.generatePDFFieldMetadata({ length: 'medium' }, 'medium-1')
+      const longMeta = LineSegmentBlot.generatePDFFieldMetadata({ length: 'long' }, 'long-1')
+      
+      expect(shortMeta.width).toBe(144)
+      expect(mediumMeta.width).toBe(288)
+      expect(longMeta.width).toBe(432)
+      
+      // All should be single-line text fields
+      expect(shortMeta.fieldSubtype).toBe('single-line')
+      expect(mediumMeta.fieldSubtype).toBe('single-line')
+      expect(longMeta.fieldSubtype).toBe('single-line')
+    })
+
+    it('should provide PDF positioning data for inline placement', () => {
+      const testData: LineSegmentData = { length: 'long' }
+      const positioning = LineSegmentBlot.getPDFPositioning(testData)
+      
+      expect(positioning).toEqual({
+        placement: 'inline',
+        verticalAlign: 'baseline',
+        marginLeft: 2,
+        marginRight: 2,
+        preserveAspectRatio: true,
+        allowBreaking: false // Don't break line segments across pages
+      })
+    })
+
+    it('should generate unique field IDs for multiple segments', () => {
+      const ids = new Set()
+      
+      // Create 5 line segments and ensure all have unique IDs
+      for (let i = 0; i < 5; i++) {
+        const blot = LineSegmentBlot.create({ length: 'medium' })
+        const fieldId = blot.getAttribute('data-field-id')
+        
+        expect(fieldId).toBeTruthy()
+        expect(ids.has(fieldId)).toBe(false)
+        ids.add(fieldId)
+      }
+      
+      expect(ids.size).toBe(5)
+    })
+
+    it('should provide PDF form field validation options', () => {
+      const validation = LineSegmentBlot.getPDFValidationOptions()
+      
+      expect(validation).toEqual({
+        required: false,
+        format: 'text',
+        maxLength: null,
+        pattern: null,
+        customValidation: false
+      })
+    })
+
+    it('should calculate PDF field dimensions based on DPI', () => {
+      const shortDimensions = LineSegmentBlot.getPDFDimensions('short')
+      const mediumDimensions = LineSegmentBlot.getPDFDimensions('medium') 
+      const longDimensions = LineSegmentBlot.getPDFDimensions('long')
+      
+      // Width should match pixel values converted to PDF points (72 DPI)
+      expect(shortDimensions.width).toBe(144)
+      expect(mediumDimensions.width).toBe(288)
+      expect(longDimensions.width).toBe(432)
+      
+      // Height should be consistent for single-line fields
+      expect(shortDimensions.height).toBe(20)
+      expect(mediumDimensions.height).toBe(20)
+      expect(longDimensions.height).toBe(20)
+    })
+
+    it('should support PDF field customization options', () => {
+      const customOptions = {
+        required: true,
+        placeholder: 'Enter text here',
+        maxLength: 50,
+        fontSize: 10
+      }
+      
+      const metadata = LineSegmentBlot.generatePDFFieldMetadata(
+        { length: 'medium' }, 
+        'custom-field',
+        customOptions
+      )
+      
+      expect(metadata.required).toBe(true)
+      expect(metadata.placeholder).toBe('Enter text here')
+      expect(metadata.maxLength).toBe(50)
+      expect(metadata.fontSize).toBe(10)
+    })
+
+    it('should extract PDF field data from DOM for serialization', () => {
+      const testData: LineSegmentData = { length: 'short' }
+      const blot = LineSegmentBlot.create(testData)
+      
+      const extractedData = LineSegmentBlot.extractPDFFieldData(blot)
+      
+      expect(extractedData).toEqual({
+        fieldType: 'single-line-text',
+        width: 144,
+        height: 20,
+        fieldId: expect.stringMatching(/^line-segment-\d+-\w+$/),
+        length: 'short',
+        positioning: {
+          placement: 'inline',
+          verticalAlign: 'baseline',
+          marginLeft: 2,
+          marginRight: 2
+        }
+      })
+    })
+  })
 })
