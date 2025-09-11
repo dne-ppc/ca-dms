@@ -139,4 +139,85 @@ describe('LineSegmentBlot', () => {
     expect(LineSegmentBlot.getPixelWidth('medium')).toBe(288)
     expect(LineSegmentBlot.getPixelWidth('long')).toBe(432)
   })
+
+  // Task 2.3.2: Length Configuration System Tests
+  describe('Length Configuration System', () => {
+    it('should have proper length constants defined', () => {
+      expect(LineSegmentBlot.LENGTH_CONSTANTS).toBeDefined()
+      expect(LineSegmentBlot.LENGTH_CONSTANTS.SHORT).toBe(144)
+      expect(LineSegmentBlot.LENGTH_CONSTANTS.MEDIUM).toBe(288)
+      expect(LineSegmentBlot.LENGTH_CONSTANTS.LONG).toBe(432)
+    })
+
+    it('should have length configuration metadata', () => {
+      expect(LineSegmentBlot.LENGTH_CONFIG).toBeDefined()
+      expect(LineSegmentBlot.LENGTH_CONFIG.short).toEqual({
+        label: 'Short (2 inches)',
+        pixels: 144,
+        inches: 2
+      })
+      expect(LineSegmentBlot.LENGTH_CONFIG.medium).toEqual({
+        label: 'Medium (4 inches)',
+        pixels: 288,
+        inches: 4
+      })
+      expect(LineSegmentBlot.LENGTH_CONFIG.long).toEqual({
+        label: 'Long (6 inches)',
+        pixels: 432,
+        inches: 6
+      })
+    })
+
+    it('should provide available length options for UI selection', () => {
+      const options = LineSegmentBlot.getAvailableLengths()
+      expect(options).toHaveLength(3)
+      expect(options).toEqual([
+        { value: 'short', label: 'Short (2 inches)', pixels: 144 },
+        { value: 'medium', label: 'Medium (4 inches)', pixels: 288 },
+        { value: 'long', label: 'Long (6 inches)', pixels: 432 }
+      ])
+    })
+
+    it('should validate length configurations', () => {
+      expect(LineSegmentBlot.isValidLength('short')).toBe(true)
+      expect(LineSegmentBlot.isValidLength('medium')).toBe(true)
+      expect(LineSegmentBlot.isValidLength('long')).toBe(true)
+      expect(LineSegmentBlot.isValidLength('invalid' as any)).toBe(false)
+      expect(LineSegmentBlot.isValidLength(undefined as any)).toBe(false)
+    })
+
+    it('should convert inches to pixels correctly', () => {
+      expect(LineSegmentBlot.inchesToPixels(2)).toBe(144)
+      expect(LineSegmentBlot.inchesToPixels(4)).toBe(288)
+      expect(LineSegmentBlot.inchesToPixels(6)).toBe(432)
+      expect(LineSegmentBlot.inchesToPixels(1.5)).toBe(108)
+    })
+
+    it('should convert pixels to inches correctly', () => {
+      expect(LineSegmentBlot.pixelsToInches(144)).toBe(2)
+      expect(LineSegmentBlot.pixelsToInches(288)).toBe(4)
+      expect(LineSegmentBlot.pixelsToInches(432)).toBe(6)
+      expect(LineSegmentBlot.pixelsToInches(108)).toBe(1.5)
+    })
+
+    it('should get length type from pixel width', () => {
+      expect(LineSegmentBlot.getLengthFromPixels(144)).toBe('short')
+      expect(LineSegmentBlot.getLengthFromPixels(288)).toBe('medium')
+      expect(LineSegmentBlot.getLengthFromPixels(432)).toBe('long')
+      expect(LineSegmentBlot.getLengthFromPixels(200)).toBe('medium') // Default fallback
+    })
+
+    it('should handle configuration-based creation', () => {
+      const config = LineSegmentBlot.LENGTH_CONFIG.long
+      const data: LineSegmentData = { length: 'long' }
+      const blot = LineSegmentBlot.create(data)
+      
+      expect(blot.style.width).toBe(`${config.pixels}px`)
+      expect(blot.classList.contains('length-long')).toBe(true)
+    })
+
+    it('should provide DPI constant for calculations', () => {
+      expect(LineSegmentBlot.DPI).toBe(72)
+    })
+  })
 })
