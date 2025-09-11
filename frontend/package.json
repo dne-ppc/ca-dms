@@ -18,6 +18,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "@types/quill": "^2.0.14",
     "quill": "^2.0.3",
     "react": "^19.1.1",
