@@ -4,10 +4,12 @@ import 'quill/dist/quill.snow.css'
 import { CustomToolbar } from './CustomToolbar'
 import { VersionTableBlot, VersionTableData } from './blots/VersionTableBlot'
 import { SignatureBlot, SignatureData } from './blots/SignatureBlot'
+import { LongResponseBlot, LongResponseData } from './blots/LongResponseBlot'
 
 // Register custom blots
 Quill.register('formats/version-table', VersionTableBlot)
 Quill.register('formats/signature-field', SignatureBlot)
+Quill.register('formats/long-response', LongResponseBlot)
 
 interface QuillEditorProps {
   initialContent?: string
@@ -37,8 +39,7 @@ export const QuillEditor = ({
         insertSignatureField(quill)
         break
       case 'long-response':
-        // TODO: Implement long response insertion
-        console.log('Long response insertion not yet implemented')
+        insertLongResponse(quill)
         break
       case 'line-segment':
         // TODO: Implement line segment insertion
@@ -92,6 +93,23 @@ export const QuillEditor = ({
     quill.insertEmbed(selection.index, 'signature-field', signatureData)
     quill.insertText(selection.index + 1, '\n') // Add newline after signature field
     quill.setSelection(selection.index + 2) // Move cursor after the signature field
+  }
+
+  const insertLongResponse = (quill: Quill) => {
+    const selection = quill.getSelection()
+    if (!selection) return
+
+    // Create default long response data
+    const longResponseData: LongResponseData = {
+      label: 'Response',
+      content: '',
+      height: 'medium'
+    }
+
+    // Insert at current cursor position
+    quill.insertEmbed(selection.index, 'long-response', longResponseData)
+    quill.insertText(selection.index + 1, '\n') // Add newline after long response
+    quill.setSelection(selection.index + 2) // Move cursor after the long response
   }
 
   useEffect(() => {
