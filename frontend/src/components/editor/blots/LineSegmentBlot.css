@@ -34,17 +34,71 @@
 }
 
 /* Responsive behavior - ensure segments don't break layout on small screens */
-@media (max-width: 768px) {
-  .ql-line-segment.length-long {
-    width: min(432px, 80vw);
+
+/* Desktop (1024px and up) - full sizes */
+@media (min-width: 1024px) {
+  .ql-line-segment.length-short {
+    max-width: 144px;
   }
   
   .ql-line-segment.length-medium {
-    width: min(288px, 60vw);
+    max-width: 288px;
+  }
+  
+  .ql-line-segment.length-long {
+    max-width: 432px;
+  }
+}
+
+/* Tablet (768px to 1023px) - maintain full sizes but with viewport constraints */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ql-line-segment.length-short {
+    max-width: min(144px, 85vw);
+  }
+  
+  .ql-line-segment.length-medium {
+    max-width: min(288px, 85vw);
+  }
+  
+  .ql-line-segment.length-long {
+    max-width: min(432px, 85vw);
+  }
+}
+
+/* Mobile (767px and below) - significant size constraints */
+@media (max-width: 767px) {
+  .ql-line-segment.length-short {
+    max-width: min(144px, 80vw);
+    min-width: 60px;
+  }
+  
+  .ql-line-segment.length-medium {
+    max-width: min(288px, 80vw);
+    min-width: 60px;
+  }
+  
+  .ql-line-segment.length-long {
+    max-width: min(432px, 80vw);
+    min-width: 60px;
+  }
+}
+
+/* Very small mobile (480px and below) - additional constraints */
+@media (max-width: 480px) {
+  .ql-line-segment {
+    min-width: 60px !important;
   }
   
   .ql-line-segment.length-short {
-    width: min(144px, 40vw);
+    max-width: min(144px, 70vw);
+  }
+  
+  .ql-line-segment.length-medium {
+    max-width: min(200px, 70vw);
+  }
+  
+  .ql-line-segment.length-long {
+    max-width: min(260px, 70vw);
   }
 }
 

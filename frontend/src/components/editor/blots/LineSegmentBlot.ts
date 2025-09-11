@@ -65,10 +65,11 @@ export class LineSegmentBlot extends Inline {
     const pixelWidth = this.getPixelWidth(length)
     node.style.width = `${pixelWidth}px`
     
-    // Add bottom border to create the line appearance
+    // Add styling for proper text flow and line appearance
     node.style.borderBottom = '1px solid #000'
     node.style.display = 'inline-block'
     node.style.minHeight = '1em'
+    node.style.verticalAlign = 'baseline'
     
     // Add a non-breaking space for content
     node.innerHTML = '&nbsp;'
@@ -139,6 +140,93 @@ export class LineSegmentBlot extends Inline {
     if (pixels === this.LENGTH_CONFIG.short.pixels) return 'short'
     if (pixels === this.LENGTH_CONFIG.long.pixels) return 'long'
     return 'medium' // Default fallback
+  }
+
+  // Responsive behavior constants and utilities
+  static readonly MIN_SEGMENT_WIDTH = 60 // Minimum readable width in pixels
+  
+  static readonly BREAKPOINTS = {
+    desktop: 1024,
+    tablet: 768,
+    mobile: 480
+  } as const
+
+  static readonly VIEWPORT_CONSTRAINTS = {
+    desktop: 0.9,  // 90% of viewport width max
+    tablet: 0.85,  // 85% of viewport width max
+    mobile: 0.8    // 80% of viewport width max
+  } as const
+
+  /**
+   * Get responsive breakpoint category for given width
+   */
+  static getBreakpoint(width: number): 'desktop' | 'tablet' | 'mobile' {
+    if (width >= this.BREAKPOINTS.desktop) return 'desktop'
+    if (width >= this.BREAKPOINTS.tablet) return 'tablet'
+    return 'mobile'
+  }
+
+  /**
+   * Get maximum width constraint for viewport
+   */
+  static getMaxWidthForViewport(viewportWidth: number): number {
+    const breakpoint = this.getBreakpoint(viewportWidth)
+    return Math.round(viewportWidth * this.VIEWPORT_CONSTRAINTS[breakpoint])
+  }
+
+  /**
+   * Get responsive multiplier for viewport width
+   */
+  static getResponsiveMultiplier(viewportWidth: number): number {
+    const breakpoint = this.getBreakpoint(viewportWidth)
+    
+    if (breakpoint === 'desktop') return 1.0
+    if (breakpoint === 'tablet') return 1.0
+    
+    // Mobile: scale down based on how small the viewport is
+    const mobileRatio = Math.min(viewportWidth / this.BREAKPOINTS.mobile, 1.0)
+    return Math.max(0.6, mobileRatio) // Never go below 60% of original size
+  }
+
+  /**
+   * Get responsive width for line segment
+   */
+  static getResponsiveWidth(length: 'short' | 'medium' | 'long', viewportWidth: number): number {
+    const originalWidth = this.LENGTH_CONFIG[length].pixels
+    const maxWidth = this.getMaxWidthForViewport(viewportWidth)
+    
+    // If original width fits within constraint, use it
+    if (originalWidth <= maxWidth) {
+      return originalWidth
+    }
+    
+    // Otherwise, scale down but respect minimum width
+    const scaledWidth = Math.round(originalWidth * this.getResponsiveMultiplier(viewportWidth))
+    return Math.max(this.MIN_SEGMENT_WIDTH, Math.min(scaledWidth, maxWidth))
+  }
+
+  /**
+   * Get width for specific container constraints
+   */
+  static getWidthForContainer(length: 'short' | 'medium' | 'long', containerWidth: number): number {
+    const originalWidth = this.LENGTH_CONFIG[length].pixels
+    const breakpoint = this.getBreakpoint(containerWidth)
+    const maxContainerWidth = Math.round(containerWidth * this.VIEWPORT_CONSTRAINTS[breakpoint])
+    
+    // If it fits, use original width
+    if (originalWidth <= maxContainerWidth) {
+      return originalWidth
+    }
+    
+    // Scale down but maintain minimum width
+    return Math.max(this.MIN_SEGMENT_WIDTH, maxContainerWidth)
+  }
+
+  /**
+   * Check if line segments support text wrapping
+   */
+  static supportsTextWrapping(): boolean {
+    return true // Inline-block elements support text wrapping
   }
 
   // Override methods for proper Quill integration

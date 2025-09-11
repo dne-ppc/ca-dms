@@ -220,4 +220,140 @@ describe('LineSegmentBlot', () => {
       expect(LineSegmentBlot.DPI).toBe(72)
     })
   })
+
+  // Task 2.3.3: Responsive Line Segments Tests
+  describe('Responsive Behavior', () => {
+    let originalInnerWidth: number
+
+    beforeEach(() => {
+      // Store original window width
+      originalInnerWidth = window.innerWidth
+    })
+
+    afterEach(() => {
+      // Restore original window width
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth
+      })
+    })
+
+    it('should maintain proportions on different screen sizes', () => {
+      const testData: LineSegmentData = { length: 'medium' }
+      const blot = LineSegmentBlot.create(testData)
+      
+      // Test desktop proportion
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1200
+      })
+      
+      const desktopWidth = LineSegmentBlot.getResponsiveWidth('medium', 1200)
+      expect(desktopWidth).toBe(288) // Full width on desktop
+      
+      // Test tablet proportion
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 768
+      })
+      
+      const tabletWidth = LineSegmentBlot.getResponsiveWidth('medium', 768)
+      expect(tabletWidth).toBe(288) // Still full width on tablet
+      
+      // Test mobile proportion
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 320
+      })
+      
+      const mobileWidth = LineSegmentBlot.getResponsiveWidth('medium', 320)
+      expect(mobileWidth).toBeLessThan(288) // Constrained on mobile
+    })
+
+    it('should handle overflow gracefully on small screens', () => {
+      // Test long segment on very small screen
+      const longSegmentWidth = LineSegmentBlot.getResponsiveWidth('long', 300)
+      expect(longSegmentWidth).toBeLessThanOrEqual(300 * 0.8) // Max 80% of viewport
+      
+      // Test medium segment should fit better
+      const mediumSegmentWidth = LineSegmentBlot.getResponsiveWidth('medium', 300)
+      expect(mediumSegmentWidth).toBeLessThanOrEqual(longSegmentWidth)
+      
+      // Test short segment should always fit
+      const shortSegmentWidth = LineSegmentBlot.getResponsiveWidth('short', 300)
+      expect(shortSegmentWidth).toBeLessThanOrEqual(mediumSegmentWidth)
+    })
+
+    it('should provide viewport-aware sizing utilities', () => {
+      expect(LineSegmentBlot.getMaxWidthForViewport(1200)).toBe(Math.round(1200 * 0.9)) // 90% on desktop
+      expect(LineSegmentBlot.getMaxWidthForViewport(768)).toBe(Math.round(768 * 0.85)) // 85% on tablet
+      expect(LineSegmentBlot.getMaxWidthForViewport(480)).toBe(Math.round(480 * 0.8)) // 80% on mobile
+    })
+
+    it('should integrate with text flow properly', () => {
+      const testData: LineSegmentData = { length: 'short' }
+      const blot = LineSegmentBlot.create(testData)
+      
+      // Should have inline-block display for proper text flow
+      expect(blot.style.display).toBe('inline-block')
+      
+      // Should have proper vertical alignment
+      expect(blot.style.verticalAlign).toBe('baseline')
+      
+      // Should support text wrapping behavior
+      expect(LineSegmentBlot.supportsTextWrapping()).toBe(true)
+    })
+
+    it('should provide responsive breakpoint utilities', () => {
+      expect(LineSegmentBlot.getBreakpoint(1200)).toBe('desktop')
+      expect(LineSegmentBlot.getBreakpoint(768)).toBe('tablet')
+      expect(LineSegmentBlot.getBreakpoint(480)).toBe('mobile')
+      expect(LineSegmentBlot.getBreakpoint(320)).toBe('mobile')
+    })
+
+    it('should calculate responsive multipliers', () => {
+      // Desktop: full size
+      expect(LineSegmentBlot.getResponsiveMultiplier(1200)).toBe(1.0)
+      
+      // Tablet: slightly reduced
+      expect(LineSegmentBlot.getResponsiveMultiplier(768)).toBe(1.0)
+      
+      // Mobile: significantly reduced for long segments
+      const mobileMult = LineSegmentBlot.getResponsiveMultiplier(320)
+      expect(mobileMult).toBeLessThan(1.0)
+      expect(mobileMult).toBeGreaterThan(0.5)
+    })
+
+    it('should handle container constraints', () => {
+      const containerWidth = 400
+      
+      // Long segment should be constrained by container
+      const longInContainer = LineSegmentBlot.getWidthForContainer('long', containerWidth)
+      expect(longInContainer).toBeLessThanOrEqual(containerWidth * 0.8)
+      
+      // Medium segment might fit
+      const mediumInContainer = LineSegmentBlot.getWidthForContainer('medium', containerWidth)
+      expect(mediumInContainer).toBeLessThanOrEqual(containerWidth * 0.9)
+      
+      // Short segment should always fit
+      const shortInContainer = LineSegmentBlot.getWidthForContainer('short', containerWidth)
+      expect(shortInContainer).toBe(144) // Original width when it fits
+    })
+
+    it('should maintain minimum readable sizes', () => {
+      // Even on tiny screens, segments should have minimum width
+      const tinyScreenWidth = LineSegmentBlot.getResponsiveWidth('short', 200)
+      expect(tinyScreenWidth).toBeGreaterThanOrEqual(LineSegmentBlot.MIN_SEGMENT_WIDTH)
+      
+      const tinyMediumWidth = LineSegmentBlot.getResponsiveWidth('medium', 200)
+      expect(tinyMediumWidth).toBeGreaterThanOrEqual(LineSegmentBlot.MIN_SEGMENT_WIDTH)
+      
+      const tinyLongWidth = LineSegmentBlot.getResponsiveWidth('long', 200)
+      expect(tinyLongWidth).toBeGreaterThanOrEqual(LineSegmentBlot.MIN_SEGMENT_WIDTH)
+    })
+  })
 })
