@@ -1,0 +1,147 @@
+.ql-signature-field {
+  margin: 20px 0;
+  padding: 20px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  background: #fefffe;
+  position: relative;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.ql-signature-field::before {
+  content: '✒️ Signature Required';
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: #495057;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.signature-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.signature-line {
+  height: 60px;
+  border-bottom: 2px solid #333;
+  margin-bottom: 8px;
+  position: relative;
+  background: linear-gradient(to bottom, transparent 58px, #333 58px, #333 60px, transparent 60px);
+}
+
+.signature-line::after {
+  content: 'X';
+  position: absolute;
+  left: 8px;
+  bottom: -12px;
+  font-size: 16px;
+  color: #6c757d;
+  font-weight: bold;
+}
+
+.signature-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.signature-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.signature-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+}
+
+.signature-field input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #495057;
+  background: #ffffff;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.signature-field input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.signature-field input::placeholder {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+/* Date input specific styling */
+.signature-field input[type="date"] {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* Responsive design */
+@media (min-width: 768px) {
+  .signature-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .signature-fields-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    gap: 16px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .ql-signature-field {
+    border: 1px solid #000;
+    background: white;
+    break-inside: avoid;
+  }
+  
+  .ql-signature-field::before {
+    display: none;
+  }
+  
+  .signature-line {
+    border-bottom: 1px solid #000;
+    height: 40px;
+  }
+  
+  .signature-field input {
+    border: none;
+    border-bottom: 1px solid #000;
+    background: transparent;
+    padding: 4px 0;
+  }
+}
+
+/* Hover effects */
+.ql-signature-field:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+/* Focus within styling */
+.ql-signature-field:focus-within {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
+}

@@ -3,9 +3,11 @@ import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
 import { CustomToolbar } from './CustomToolbar'
 import { VersionTableBlot, VersionTableData } from './blots/VersionTableBlot'
+import { SignatureBlot, SignatureData } from './blots/SignatureBlot'
 
 // Register custom blots
 Quill.register('formats/version-table', VersionTableBlot)
+Quill.register('formats/signature-field', SignatureBlot)
 
 interface QuillEditorProps {
   initialContent?: string
@@ -32,8 +34,7 @@ export const QuillEditor = ({
         insertVersionTable(quill)
         break
       case 'signature-field':
-        // TODO: Implement signature field insertion
-        console.log('Signature field insertion not yet implemented')
+        insertSignatureField(quill)
         break
       case 'long-response':
         // TODO: Implement long response insertion
@@ -74,6 +75,23 @@ export const QuillEditor = ({
     quill.insertEmbed(0, 'version-table', versionData)
     quill.insertText(1, '\n') // Add newline after version table
     quill.setSelection(2) // Move cursor after the version table
+  }
+
+  const insertSignatureField = (quill: Quill) => {
+    const selection = quill.getSelection()
+    if (!selection) return
+
+    // Create default signature field data
+    const signatureData: SignatureData = {
+      name: '',
+      date: '',
+      title: ''
+    }
+
+    // Insert at current cursor position
+    quill.insertEmbed(selection.index, 'signature-field', signatureData)
+    quill.insertText(selection.index + 1, '\n') // Add newline after signature field
+    quill.setSelection(selection.index + 2) // Move cursor after the signature field
   }
 
   useEffect(() => {

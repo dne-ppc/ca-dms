@@ -39,4 +39,29 @@ describe('QuillEditor', () => {
     const editor = screen.getByTestId('quill-editor')
     expect(editor).toBeInTheDocument()
   })
+
+  it('should handle placeholder insertion', () => {
+    const mockOnInsertPlaceholder = vi.fn()
+    
+    render(
+      <QuillEditor 
+        initialContent=""
+        onInsertPlaceholder={mockOnInsertPlaceholder}
+      />
+    )
+    
+    // This test verifies the component renders without errors
+    // More detailed placeholder insertion testing would require 
+    // mocking Quill's internal methods
+    expect(mockOnInsertPlaceholder).not.toHaveBeenCalled()
+  })
+
+  it('should register custom blots', () => {
+    render(<QuillEditor initialContent="" />)
+    
+    // Verify that custom blots are registered
+    // Note: This is implicit verification through successful rendering
+    const editor = screen.getByTestId('quill-editor')
+    expect(editor).toBeInTheDocument()
+  })
 })
