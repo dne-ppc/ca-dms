@@ -40,6 +40,30 @@ export interface DocumentStoreState {
   currentDocument: Document | null
 }
 
+// Placeholder object types and management
+export type PlaceholderType = 'version-table' | 'signature' | 'long-response' | 'line-segment'
+
+export interface PlaceholderObject {
+  id: string
+  type: PlaceholderType
+  data: any
+  position?: number // Position within the document Delta
+}
+
+export interface PlaceholderValidationResult {
+  isValid: boolean
+  errors: string[]
+  warnings: string[]
+}
+
+export interface PlaceholderStats {
+  totalPlaceholders: number
+  versionTables: number
+  signatures: number
+  longResponses: number
+  lineSegments: number
+}
+
 // User types
 export interface User {
   id: string
