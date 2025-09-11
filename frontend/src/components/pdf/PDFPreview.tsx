@@ -6,12 +6,27 @@ import './PDFPreview.css';
 // Set up the worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
+interface DocumentMetadata {
+  id: string;
+  title: string;
+  version?: string;
+  created?: string;
+}
+
+interface DownloadResult {
+  filename: string;
+  size: number;
+}
+
 interface PDFPreviewProps {
   pdfUrl: string;
   className?: string;
   onLoadSuccess?: (pdf: PDFDocumentProxy) => void;
   onLoadError?: (error: Error) => void;
   scale?: number;
+  documentMetadata?: DocumentMetadata;
+  onDownloadSuccess?: (result: DownloadResult) => void;
+  onDownloadError?: (error: Error) => void;
 }
 
 interface FormField {
@@ -29,6 +44,8 @@ interface PDFPreviewState {
   loading: boolean;
   error: string | null;
   formFields: FormField[];
+  downloading: boolean;
+  downloadError: string | null;
 }
 
 const PDFPreview: React.FC<PDFPreviewProps> = ({
@@ -36,7 +53,10 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
   className = '',
   onLoadSuccess,
   onLoadError,
-  scale = 1.0
+  scale = 1.0,
+  documentMetadata,
+  onDownloadSuccess,
+  onDownloadError
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<PDFPreviewState>({
@@ -45,7 +65,9 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
     numPages: 0,
     loading: false,
     error: null,
-    formFields: []
+    formFields: [],
+    downloading: false,
+    downloadError: null
   });
 
   const loadPDF = useCallback(async () => {
@@ -89,6 +111,78 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
       onLoadError?.(error instanceof Error ? error : new Error(errorMessage));
     }
   }, [pdfUrl, onLoadSuccess, onLoadError]);
+
+  const generateFilename = useCallback((metadata: DocumentMetadata): string => {
+    const sanitize = (text: string) => text.replace(/[^a-zA-Z0-9\-_.]/g, '_');
+    
+    let filename = sanitize(metadata.title || 'Document');
+    
+    if (metadata.version) {
+      filename += `_v${metadata.version}`;
+    }
+    
+    return `${filename}.pdf`;
+  }, []);
+
+  const downloadPDF = useCallback(async () => {
+    if (!documentMetadata) return;
+
+    setState(prev => ({
+      ...prev,
+      downloading: true,
+      downloadError: null
+    }));
+
+    try {
+      const response = await fetch(`/api/documents/${documentMetadata.id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate PDF: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const filename = generateFilename(documentMetadata);
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+
+      setState(prev => ({
+        ...prev,
+        downloading: false,
+        downloadError: null
+      }));
+
+      onDownloadSuccess?.({
+        filename,
+        size: blob.size
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download PDF';
+      setState(prev => ({
+        ...prev,
+        downloading: false,
+        downloadError: errorMessage
+      }));
+
+      onDownloadError?.(error instanceof Error ? error : new Error(errorMessage));
+    }
+  }, [documentMetadata, generateFilename, onDownloadSuccess, onDownloadError]);
 
   const detectFormFields = useCallback(async (page: PDFPageProxy, pageNum: number): Promise<FormField[]> => {
     try {
@@ -303,6 +397,33 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
 
   return (
     <div className={`pdf-preview ${className}`} data-testid="pdf-preview-container">
+      {/* Download section */}
+      {documentMetadata && state.numPages > 0 && (
+        <div className="pdf-download-section">
+          <button 
+            onClick={downloadPDF}
+            disabled={state.downloading}
+            className="pdf-download-button"
+            data-testid="pdf-download-button"
+          >
+            {state.downloading ? 'Downloading...' : 'Download PDF'}
+          </button>
+          
+          {state.downloading && (
+            <div className="pdf-download-loading" data-testid="pdf-download-loading">
+              <div className="pdf-spinner"></div>
+              <span>Generating PDF...</span>
+            </div>
+          )}
+          
+          {state.downloadError && (
+            <div className="pdf-download-error" data-testid="pdf-download-error">
+              {state.downloadError}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="pdf-document-container" ref={containerRef}>
         {state.numPages > 0 && (
           <div className="pdf-document-info">

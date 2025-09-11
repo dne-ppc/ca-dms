@@ -312,4 +312,277 @@ describe('PDFPreview', () => {
       });
     });
   });
+
+  // PDF Download and Export Tests (Task 4.1.4)
+  describe('PDF Download and Export', () => {
+    const mockDocumentMetadata = {
+      id: 'doc-123',
+      title: 'Test Document',
+      version: '1.0',
+      created: '2024-01-01T00:00:00Z'
+    };
+
+    let mockLink: any;
+
+    beforeEach(() => {
+      // Mock fetch for API calls
+      global.fetch = vi.fn();
+      
+      // Mock URL.createObjectURL and revokeObjectURL
+      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+      global.URL.revokeObjectURL = vi.fn();
+      
+      // Mock document.createElement for download link
+      mockLink = {
+        href: '',
+        download: '',
+        click: vi.fn(),
+        style: { display: '' }
+      };
+      const originalCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
+        if (tagName === 'a') {
+          return mockLink as any;
+        }
+        return originalCreateElement(tagName);
+      });
+    });
+
+    it('should render download button when PDF is loaded', async () => {
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      render(<PDFPreview pdfUrl="test.pdf" documentMetadata={mockDocumentMetadata} />);
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('pdf-download-button')).toBeInTheDocument();
+        expect(screen.getByText('Download PDF')).toBeInTheDocument();
+      });
+    });
+
+    it('should show loading state during PDF generation', async () => {
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      // Mock API call that takes time
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockImplementation(
+        () => new Promise(() => {}) // Never resolves to keep loading state
+      );
+
+      render(<PDFPreview pdfUrl="test.pdf" documentMetadata={mockDocumentMetadata} />);
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('pdf-download-loading')).toBeInTheDocument();
+        expect(screen.getByText('Generating PDF...')).toBeInTheDocument();
+      });
+    });
+
+    it('should call PDF generation API with correct parameters', async () => {
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      const mockBlob = new Blob(['mock pdf content'], { type: 'application/pdf' });
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockResolvedValue({
+        ok: true,
+        blob: () => Promise.resolve(mockBlob)
+      } as Response);
+
+      render(<PDFPreview pdfUrl="test.pdf" documentMetadata={mockDocumentMetadata} />);
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/documents/doc-123/pdf', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/pdf'
+          }
+        });
+      });
+    });
+
+    it('should generate smart filename suggestions', async () => {
+      // Reset mockLink for this test
+      mockLink.download = '';
+      mockLink.click.mockClear();
+      
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      const mockBlob = new Blob(['mock pdf content'], { type: 'application/pdf' });
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockResolvedValue({
+        ok: true,
+        blob: () => Promise.resolve(mockBlob)
+      } as Response);
+
+      render(<PDFPreview pdfUrl="test.pdf" documentMetadata={mockDocumentMetadata} />);
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        // Check that the mockLink download property was set correctly
+        expect(mockLink.download).toBe('Test_Document_v1.0.pdf');
+        expect(mockLink.click).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle PDF generation API errors', async () => {
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      } as Response);
+
+      render(<PDFPreview pdfUrl="test.pdf" documentMetadata={mockDocumentMetadata} />);
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('pdf-download-error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to generate PDF: Internal Server Error')).toBeInTheDocument();
+      });
+    });
+
+    it('should trigger download when PDF generation succeeds', async () => {
+      // Reset mockLink for this test
+      mockLink.click.mockClear();
+      
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      const mockBlob = new Blob(['mock pdf content'], { type: 'application/pdf' });
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockResolvedValue({
+        ok: true,
+        blob: () => Promise.resolve(mockBlob)
+      } as Response);
+
+      render(<PDFPreview pdfUrl="test.pdf" documentMetadata={mockDocumentMetadata} />);
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        expect(global.URL.createObjectURL).toHaveBeenCalledWith(mockBlob);
+        expect(mockLink.click).toHaveBeenCalled();
+        expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+      });
+    });
+
+    it('should not show download button when no document metadata provided', async () => {
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      render(<PDFPreview pdfUrl="test.pdf" />);
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('pdf-canvas-1')).toBeInTheDocument();
+        expect(screen.queryByTestId('pdf-download-button')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should call onDownloadSuccess callback when download completes', async () => {
+      const onDownloadSuccess = vi.fn();
+      
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      const mockBlob = new Blob(['mock pdf content'], { type: 'application/pdf' });
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockResolvedValue({
+        ok: true,
+        blob: () => Promise.resolve(mockBlob)
+      } as Response);
+
+      render(
+        <PDFPreview 
+          pdfUrl="test.pdf" 
+          documentMetadata={mockDocumentMetadata}
+          onDownloadSuccess={onDownloadSuccess}
+        />
+      );
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        expect(onDownloadSuccess).toHaveBeenCalledWith({
+          filename: 'Test_Document_v1.0.pdf',
+          size: mockBlob.size
+        });
+      });
+    });
+
+    it('should call onDownloadError callback when download fails', async () => {
+      const onDownloadError = vi.fn();
+      const { getDocument } = await import('pdfjs-dist');
+      mockPDFDocument.getPage.mockResolvedValue(mockPage);
+      (getDocument as vi.MockedFunction<typeof getDocument>).mockReturnValue({
+        promise: Promise.resolve(mockPDFDocument)
+      });
+
+      const error = new Error('Network error');
+      (global.fetch as vi.MockedFunction<typeof fetch>).mockRejectedValue(error);
+
+      render(
+        <PDFPreview 
+          pdfUrl="test.pdf" 
+          documentMetadata={mockDocumentMetadata}
+          onDownloadError={onDownloadError}
+        />
+      );
+      
+      await waitFor(() => {
+        const downloadButton = screen.getByTestId('pdf-download-button');
+        downloadButton.click();
+      });
+
+      await waitFor(() => {
+        expect(onDownloadError).toHaveBeenCalledWith(error);
+      });
+    });
+  });
 });
