@@ -3,10 +3,41 @@ export interface Document {
   id: string
   title: string
   content: string // Quill Delta JSON
-  created_at: string
-  updated_at: string
+  createdAt: Date
+  updatedAt: Date
   version: number
-  author_id: string
+  status: 'draft' | 'published' | 'archived'
+  authorId?: string
+  // Legacy fields for backward compatibility
+  created_at?: string
+  updated_at?: string
+  author_id?: string
+}
+
+// Document creation data
+export interface CreateDocumentData {
+  title: string
+  content: string
+}
+
+// Document metadata updates
+export interface DocumentMetadataUpdate {
+  title?: string
+  status?: 'draft' | 'published' | 'archived'
+}
+
+// Document statistics
+export interface DocumentStats {
+  totalDocuments: number
+  draftDocuments: number
+  publishedDocuments: number
+  archivedDocuments: number
+}
+
+// Store state for import/export
+export interface DocumentStoreState {
+  documents: Document[]
+  currentDocument: Document | null
 }
 
 // User types
