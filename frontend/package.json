@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "@types/pdfjs-dist": "^2.10.377",
     "@types/quill": "^2.0.14",
+    "pdfjs-dist": "^4.8.69",
     "quill": "^2.0.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
