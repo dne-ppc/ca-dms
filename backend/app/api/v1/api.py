@@ -2,7 +2,7 @@
 API v1 router configuration
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import documents, auth, workflows, websockets, collaboration, presence
+from app.api.v1.endpoints import documents, auth, workflows, websockets, collaboration, presence, collaborative_placeholders
 
 api_router = APIRouter()
 
@@ -23,3 +23,6 @@ api_router.include_router(collaboration.router, prefix="/collaboration", tags=["
 
 # Include presence routes
 api_router.include_router(presence.router, prefix="/presence", tags=["Presence"])
+
+# Include collaborative placeholder routes
+api_router.include_router(collaborative_placeholders.router, prefix="/placeholders", tags=["Collaborative Placeholders"])

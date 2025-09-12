@@ -8,14 +8,16 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPExcept
 from app.core.websocket_manager import websocket_manager
 from app.core.websocket_auth import get_user_from_websocket_token
 from app.services.presence_service import PresenceService
+from app.services.collaborative_placeholder_service import CollaborativePlaceholderService
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Global presence service instance
+# Global service instances
 presence_service = PresenceService(websocket_manager)
+placeholder_service = CollaborativePlaceholderService(websocket_manager)
 
 
 @router.websocket("/ws")
@@ -168,6 +170,68 @@ async def handle_websocket_message(user_id: str, message: dict):
                         },
                         exclude_user=user_id
                     )
+    
+    elif message_type == "placeholder_lock":
+        # Handle placeholder locking via WebSocket
+        document_id = message.get("document_id")
+        placeholder_id = message.get("placeholder_id")
+        
+        if document_id and placeholder_id:
+            success = placeholder_service.lock_placeholder(
+                document_id,
+                placeholder_id,
+                user_id
+            )
+            
+            if success:
+                # Broadcast lock to other users
+                await placeholder_service.broadcast_placeholder_update(
+                    document_id,
+                    placeholder_id,
+                    "lock",
+                    user_id,
+                    {"locked_by": user_id},
+                    exclude_user=user_id
+                )
+            
+            # Send response to requesting user
+            await websocket_manager.send_to_user(user_id, {
+                "type": "placeholder_lock_response",
+                "document_id": document_id,
+                "placeholder_id": placeholder_id,
+                "success": success
+            })
+    
+    elif message_type == "placeholder_unlock":
+        # Handle placeholder unlocking via WebSocket
+        document_id = message.get("document_id")
+        placeholder_id = message.get("placeholder_id")
+        
+        if document_id and placeholder_id:
+            success = placeholder_service.unlock_placeholder(
+                document_id,
+                placeholder_id,
+                user_id
+            )
+            
+            if success:
+                # Broadcast unlock to other users
+                await placeholder_service.broadcast_placeholder_update(
+                    document_id,
+                    placeholder_id,
+                    "unlock",
+                    user_id,
+                    {"locked_by": None},
+                    exclude_user=user_id
+                )
+            
+            # Send response to requesting user
+            await websocket_manager.send_to_user(user_id, {
+                "type": "placeholder_unlock_response",
+                "document_id": document_id,
+                "placeholder_id": placeholder_id,
+                "success": success
+            })
     
     else:
         logger.warning(f"Unknown message type: {message_type} from user {user_id}")
