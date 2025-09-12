@@ -67,3 +67,54 @@ class DocumentSearchResponse(BaseModel):
     documents: List[DocumentResponse]
     query: str
     total: int
+
+
+class SearchHighlight(BaseModel):
+    """Schema for search result highlights"""
+    field: str = Field(..., description="Field name (title or content)")
+    content: str = Field(..., description="Highlighted content with markup")
+
+
+class AdvancedSearchResult(BaseModel):
+    """Schema for advanced search result with metadata"""
+    document: DocumentResponse
+    relevance_score: float = Field(default=0.0, ge=0.0)
+    highlights: List[SearchHighlight] = Field(default_factory=list)
+    preview: Optional[str] = Field(None, description="Context preview around matches")
+
+
+class SearchStatistics(BaseModel):
+    """Schema for search result statistics"""
+    total_matches: int
+    search_time_ms: float
+    document_type_breakdown: Dict[str, int]
+    query: Optional[str]
+    timestamp: str
+
+
+class AdvancedSearchQuery(BaseModel):
+    """Schema for advanced search queries"""
+    query: Optional[str] = Field(None, description="Search query text")
+    document_type: Optional[str] = Field(None, description="Filter by document type")
+    created_by: Optional[str] = Field(None, description="Filter by author")
+    created_after: Optional[str] = Field(None, description="Filter by creation date (ISO format)")
+    created_before: Optional[str] = Field(None, description="Filter by creation date (ISO format)")
+    sort_by: str = Field(default="relevance", description="Sort field: relevance, created_at, title")
+    sort_order: str = Field(default="desc", description="Sort order: asc, desc")
+    limit: int = Field(default=50, ge=1, le=100, description="Maximum results to return")
+    offset: int = Field(default=0, ge=0, description="Number of results to skip")
+    include_highlights: bool = Field(default=False, description="Include highlighted matches")
+    context_length: int = Field(default=50, ge=0, le=200, description="Characters of context around matches")
+    search_placeholders: bool = Field(default=True, description="Include placeholder content in search")
+    fuzzy: bool = Field(default=False, description="Enable fuzzy matching for typos")
+    include_stats: bool = Field(default=False, description="Include search statistics")
+
+
+class AdvancedSearchResponse(BaseModel):
+    """Schema for advanced search responses"""
+    results: List[AdvancedSearchResult]
+    total: int
+    query: Optional[str]
+    statistics: Optional[SearchStatistics] = None
+    offset: int
+    limit: int

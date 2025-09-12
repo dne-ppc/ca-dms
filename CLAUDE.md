@@ -120,14 +120,28 @@ backend/
 
 ---
 
-## 🚀 Development Workflow
+## Development Rules - NEVER VIOLATE
+
+### TDD Workflow - RED-GREEN-REFACTOR (MANDATORY)
+1. **RED**: Write comprehensive failing tests that define expected behavior
+2. **GREEN**: Write minimal code to make all tests pass (no shortcuts)
+3. **REFACTOR**: Improve code quality while keeping all tests green
+4. **DOCUMENT**: Update TODO.md (or EXTRAS.md) with completion details and test results
+5. **COMMIT & PUSH**: Stage all changes, commit with detailed message, push to remote
 
 ### **Branch Strategy**
 - **Main**: Production-ready code only
 - **Develop**: Integration branch for features
 - **Feature Branches**: `feature/task-number-description`
 
-### **Commit Message Format**
+
+### Git Commits
+**Git Configuration Requirements:**
+- Be specific: only commit your work
+- All commits must include comprehensive test results
+- Push required before marking tasks complete
+
+**Commit Message Format**
 ```
 type(scope): description
 

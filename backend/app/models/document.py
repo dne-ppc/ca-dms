@@ -2,6 +2,7 @@
 Document model for CA-DMS
 """
 from sqlalchemy import Column, String, DateTime, Integer, Text, JSON, Index
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from app.core.database import Base
@@ -26,6 +27,9 @@ class Document(Base):
     # User tracking (will be enhanced with user management later)
     created_by = Column(String, nullable=True, index=True)  # Index for user filtering
     updated_by = Column(String, nullable=True)
+    
+    # Relationships
+    history = relationship("DocumentHistory", back_populates="document", cascade="all, delete-orphan")
     
     # Performance indexes for common queries
     __table_args__ = (

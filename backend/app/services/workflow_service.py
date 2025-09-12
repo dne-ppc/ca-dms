@@ -23,6 +23,12 @@ from app.schemas.workflow import (
     WorkflowInstanceCreate,
     ApprovalAction
 )
+from app.services.notification_service import (
+    NotificationService, 
+    notify_workflow_assignment,
+    notify_document_shared
+)
+from app.models.notification import NotificationType, NotificationPriority
 import uuid
 
 
@@ -182,6 +188,10 @@ class WorkflowService:
         
         self.db.commit()
         self.db.refresh(instance)
+        
+        # Send workflow assignment notifications
+        self._send_workflow_notifications(instance.id, "started")
+        
         return instance
     
     def _create_step_instance(self, workflow_instance_id: str, step: WorkflowStep) -> WorkflowStepInstance:
@@ -242,15 +252,18 @@ class WorkflowService:
         if action.action == "approve":
             step_instance.status = StepInstanceStatus.APPROVED
             self._advance_workflow(step_instance.workflow_instance_id)
+            self._send_workflow_notifications(step_instance.workflow_instance_id, "approved", step_instance)
         elif action.action == "reject":
             step_instance.status = StepInstanceStatus.REJECTED
             self._reject_workflow(step_instance.workflow_instance_id, action.comments)
+            self._send_workflow_notifications(step_instance.workflow_instance_id, "rejected", step_instance)
         elif action.action == "delegate":
             if action.delegate_to:
                 step_instance.delegated_to = action.delegate_to
                 step_instance.delegated_at = datetime.utcnow()
                 step_instance.delegation_reason = action.delegation_reason
                 step_instance.assigned_to = action.delegate_to
+                self._send_workflow_notifications(step_instance.workflow_instance_id, "delegated", step_instance)
                 # Keep status as IN_PROGRESS for new assignee
         
         self.db.commit()
@@ -292,11 +305,13 @@ class WorkflowService:
             # Workflow is complete
             instance.status = WorkflowInstanceStatus.COMPLETED
             instance.completed_at = datetime.utcnow()
+            self._send_workflow_notifications(workflow_instance_id, "completed")
         else:
             # Create next step instances
             for step in next_steps:
                 self._create_step_instance(instance.id, step)
             instance.current_step_order = next_step_order
+            self._send_workflow_notifications(workflow_instance_id, "advanced")
         
         self.db.commit()
     
@@ -372,6 +387,9 @@ class WorkflowService:
                 step_instance.escalated_at = datetime.utcnow()
                 step_instance.escalated_to = escalation_user
                 step_instance.assigned_to = escalation_user
+                
+                # Send escalation notification
+                self._send_workflow_notifications(step_instance.workflow_instance_id, "escalated", step_instance)
         
         self.db.commit()
     
@@ -1009,3 +1027,193 @@ class WorkflowService:
             "first_half_avg": first_half_avg,
             "second_half_avg": second_half_avg
         }
+    
+    def _send_workflow_notifications(
+        self, 
+        workflow_instance_id: str, 
+        event_type: str, 
+        step_instance: Optional[WorkflowStepInstance] = None
+    ):
+        """Send notifications for workflow events"""
+        try:
+            instance = self.db.query(WorkflowInstance).filter(
+                WorkflowInstance.id == workflow_instance_id
+            ).first()
+            
+            if not instance:
+                return
+            
+            document = instance.document
+            if not document:
+                return
+            
+            notification_service = NotificationService(self.db)
+            
+            if event_type == "started":
+                # Notify all assigned users for first steps
+                first_steps = self.db.query(WorkflowStepInstance).filter(
+                    and_(
+                        WorkflowStepInstance.workflow_instance_id == workflow_instance_id,
+                        WorkflowStepInstance.assigned_to.isnot(None)
+                    )
+                ).all()
+                
+                for step in first_steps:
+                    self._create_assignment_notification(
+                        notification_service, step.assigned_to, document, instance, step
+                    )
+            
+            elif event_type == "approved" and step_instance:
+                # Notify workflow initiator of approval
+                self._create_status_notification(
+                    notification_service, instance.initiated_by, document, instance, 
+                    "approved", f"Step '{step_instance.step.name}' was approved"
+                )
+            
+            elif event_type == "rejected" and step_instance:
+                # Notify workflow initiator of rejection
+                self._create_status_notification(
+                    notification_service, instance.initiated_by, document, instance,
+                    "rejected", f"Step '{step_instance.step.name}' was rejected"
+                )
+            
+            elif event_type == "delegated" and step_instance:
+                # Notify new assignee of delegation
+                if step_instance.delegated_to:
+                    self._create_assignment_notification(
+                        notification_service, step_instance.delegated_to, document, instance, step_instance
+                    )
+            
+            elif event_type == "escalated" and step_instance:
+                # Notify escalation target
+                if step_instance.escalated_to:
+                    self._create_escalation_notification(
+                        notification_service, step_instance.escalated_to, document, instance, step_instance
+                    )
+            
+            elif event_type == "completed":
+                # Notify workflow initiator of completion
+                self._create_status_notification(
+                    notification_service, instance.initiated_by, document, instance,
+                    "completed", "Workflow has been completed successfully"
+                )
+            
+            elif event_type == "advanced":
+                # Notify newly assigned users for next steps
+                current_steps = self.db.query(WorkflowStepInstance).filter(
+                    and_(
+                        WorkflowStepInstance.workflow_instance_id == workflow_instance_id,
+                        WorkflowStepInstance.status == StepInstanceStatus.IN_PROGRESS,
+                        WorkflowStepInstance.assigned_to.isnot(None)
+                    )
+                ).all()
+                
+                for step in current_steps:
+                    if step.started_at and (datetime.utcnow() - step.started_at).seconds < 300:  # New within 5 minutes
+                        self._create_assignment_notification(
+                            notification_service, step.assigned_to, document, instance, step
+                        )
+                        
+        except Exception as e:
+            # Log error but don't break workflow execution
+            print(f"Error sending workflow notifications: {str(e)}")
+    
+    def _create_assignment_notification(
+        self, 
+        notification_service: NotificationService,
+        user_id: str,
+        document: Document,
+        instance: WorkflowInstance,
+        step_instance: WorkflowStepInstance
+    ):
+        """Create workflow assignment notification"""
+        try:
+            notification_service.create_notification(
+                user_id=user_id,
+                template_name="workflow_assigned",
+                template_variables={
+                    "document_title": document.title,
+                    "workflow_type": instance.workflow.name,
+                    "step_name": step_instance.step.name,
+                    "due_date": step_instance.due_date.strftime("%B %d, %Y") if step_instance.due_date else "No due date",
+                    "assigned_by": instance.initiated_by,
+                    "instructions": step_instance.step.instructions or "Please review and approve"
+                },
+                notification_type=NotificationType.EMAIL,
+                priority=NotificationPriority.HIGH,
+                context_data={
+                    "event_type": "workflow_assigned",
+                    "document_title": document.title,
+                    "workflow_instance_id": instance.id,
+                    "step_instance_id": step_instance.id
+                }
+            )
+        except Exception as e:
+            print(f"Error creating assignment notification: {str(e)}")
+    
+    def _create_status_notification(
+        self,
+        notification_service: NotificationService,
+        user_id: str,
+        document: Document,
+        instance: WorkflowInstance,
+        status: str,
+        message: str
+    ):
+        """Create workflow status notification"""
+        try:
+            template_name = f"workflow_{status}"
+            priority = NotificationPriority.HIGH if status == "rejected" else NotificationPriority.NORMAL
+            
+            notification_service.create_notification(
+                user_id=user_id,
+                template_name=template_name,
+                template_variables={
+                    "document_title": document.title,
+                    "workflow_type": instance.workflow.name,
+                    "message": message,
+                    "status": status.title()
+                },
+                notification_type=NotificationType.EMAIL,
+                priority=priority,
+                context_data={
+                    "event_type": f"workflow_{status}",
+                    "document_title": document.title,
+                    "workflow_instance_id": instance.id
+                }
+            )
+        except Exception as e:
+            print(f"Error creating status notification: {str(e)}")
+    
+    def _create_escalation_notification(
+        self,
+        notification_service: NotificationService,
+        user_id: str,
+        document: Document,
+        instance: WorkflowInstance,
+        step_instance: WorkflowStepInstance
+    ):
+        """Create workflow escalation notification"""
+        try:
+            notification_service.create_notification(
+                user_id=user_id,
+                template_name="workflow_escalated",
+                template_variables={
+                    "document_title": document.title,
+                    "workflow_type": instance.workflow.name,
+                    "step_name": step_instance.step.name,
+                    "original_assignee": step_instance.delegated_to or "Previous assignee",
+                    "escalation_reason": "Overdue approval",
+                    "due_date": step_instance.due_date.strftime("%B %d, %Y") if step_instance.due_date else "No due date"
+                },
+                notification_type=NotificationType.EMAIL,
+                priority=NotificationPriority.HIGH,
+                context_data={
+                    "event_type": "workflow_escalated",
+                    "document_title": document.title,
+                    "workflow_instance_id": instance.id,
+                    "step_instance_id": step_instance.id
+                }
+            )
+        except Exception as e:
+            print(f"Error creating escalation notification: {str(e)}")

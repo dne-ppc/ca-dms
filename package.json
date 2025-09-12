@@ -1,0 +1,13 @@
+{
+  "name": "ca-dms",
+  "version": "1.0.0",
+  "description": "Community Association Document Management System",
+  "scripts": {
+    "bug": "node scripts/submit-bug.js",
+    "issue": "node scripts/submit-bug.js",
+    "report": "node scripts/submit-bug.js"
+  },
+  "keywords": ["document-management", "governance", "community-association"],
+  "author": "CA-DMS Team",
+  "license": "MIT"
+}

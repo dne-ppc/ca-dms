@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.database import get_db
+from app.core.notification_templates import create_default_templates
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -20,6 +22,15 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the application on startup"""
+    # Create default notification templates
+    db = next(get_db())
+    create_default_templates(db)
+    db.close()
 
 
 @app.get("/")

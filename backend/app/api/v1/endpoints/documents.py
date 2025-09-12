@@ -26,7 +26,12 @@ from app.schemas.document import (
     DocumentResponse, 
     DocumentList,
     DocumentSearchQuery,
-    DocumentSearchResponse
+    DocumentSearchResponse,
+    AdvancedSearchQuery,
+    AdvancedSearchResponse,
+    AdvancedSearchResult,
+    SearchHighlight,
+    SearchStatistics
 )
 from app.models.user import User
 
@@ -185,6 +190,97 @@ def get_documents(
         skip=skip,
         limit=limit
     )
+
+
+@router.get("/advanced-search", response_model=AdvancedSearchResponse)
+def advanced_search_documents(
+    query: Optional[str] = Query(default=None, description="Search query text"),
+    document_type: Optional[str] = Query(default=None, description="Filter by document type"),
+    created_by: Optional[str] = Query(default=None, description="Filter by author"),
+    created_after: Optional[str] = Query(default=None, description="Filter by creation date (ISO format)"),
+    created_before: Optional[str] = Query(default=None, description="Filter by creation date (ISO format)"),
+    sort_by: str = Query(default="relevance", description="Sort field: relevance, created_at, title"),
+    sort_order: str = Query(default="desc", description="Sort order: asc, desc"),
+    limit: int = Query(default=50, ge=1, le=100, description="Maximum results to return"),
+    offset: int = Query(default=0, ge=0, description="Number of results to skip"),
+    highlight: bool = Query(default=False, description="Include highlighted matches"),
+    context_length: int = Query(default=50, ge=0, le=200, description="Characters of context around matches"),
+    search_placeholders: bool = Query(default=True, description="Include placeholder content in search"),
+    fuzzy: bool = Query(default=False, description="Enable fuzzy matching for typos"),
+    include_stats: bool = Query(default=False, description="Include search statistics"),
+    db: Session = Depends(get_db)
+):
+    """Advanced document search with filtering, highlighting, and relevance scoring"""
+    from app.services.advanced_search_service import AdvancedSearchService
+    
+    # Build filters dictionary
+    filters = {}
+    if document_type:
+        filters["document_type"] = document_type
+    if created_by:
+        filters["created_by"] = created_by
+    if created_after:
+        filters["created_after"] = created_after
+    if created_before:
+        filters["created_before"] = created_before
+    
+    # Perform search
+    search_service = AdvancedSearchService(db)
+    
+    try:
+        search_results, total, statistics = search_service.search_documents(
+            query=query,
+            filters=filters,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+            include_highlights=highlight,
+            context_length=context_length,
+            search_placeholders=search_placeholders,
+            fuzzy=fuzzy
+        )
+        
+        # Convert SearchResult objects to response schema
+        response_results = []
+        for result in search_results:
+            # Convert highlights to SearchHighlight objects
+            highlight_objects = []
+            if result.highlights:
+                if len(result.highlights) > 0:
+                    highlight_objects.append(SearchHighlight(
+                        field="title",
+                        content=result.highlights[0]
+                    ))
+                if len(result.highlights) > 1:
+                    highlight_objects.append(SearchHighlight(
+                        field="content", 
+                        content=result.highlights[1]
+                    ))
+            
+            response_results.append(AdvancedSearchResult(
+                document=DocumentResponse.model_validate(result.document),
+                relevance_score=result.relevance_score,
+                highlights=highlight_objects,
+                preview=result.preview
+            ))
+        
+        # Build response
+        response_data = {
+            "results": response_results,
+            "total": total,
+            "query": query,
+            "offset": offset,
+            "limit": limit
+        }
+        
+        if include_stats:
+            response_data["statistics"] = SearchStatistics(**statistics)
+        
+        return AdvancedSearchResponse(**response_data)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)

@@ -53,6 +53,10 @@ class User(Base):
     verification_token = Column(String, nullable=True)
     verified_at = Column(DateTime(timezone=True), nullable=True)
     
+    # Relationships
+    notification_preferences = relationship("NotificationPreference", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role.value})>"
     

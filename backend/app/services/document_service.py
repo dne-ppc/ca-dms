@@ -5,7 +5,9 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.document import Document
+from app.models.document_history import DocumentHistory
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse
+from app.services.document_comparison_service import DocumentComparisonService
 import uuid
 
 
@@ -38,6 +40,18 @@ class DocumentService:
         # commit() synchronizes to disk, flush() just sends to database
         self.db.flush()
         
+        # Create initial history entry
+        self._create_history_entry(
+            document_id=document_id,
+            version_number=1,
+            title=document_data.title,
+            content=document_data.content,
+            document_type=document_data.document_type,
+            placeholders=document_data.placeholders,
+            change_summary="Initial document creation",
+            created_by=created_by
+        )
+        
         # Only commit at the end to reduce I/O overhead
         self.db.commit()
         
@@ -63,22 +77,52 @@ class DocumentService:
         
         return query.order_by(desc(Document.updated_at)).offset(skip).limit(limit).all()
     
-    def update_document(self, document_id: str, document_data: DocumentUpdate) -> Optional[Document]:
+    def update_document(self, document_id: str, document_data: DocumentUpdate, updated_by: Optional[str] = None) -> Optional[Document]:
         """Update a document"""
         db_document = self.get_document(document_id)
         if not db_document:
             return None
         
+        # Store original state for history
+        original_version = db_document.version
+        original_content = db_document.content
+        original_title = db_document.title
+        
         # Update fields
         update_data = document_data.model_dump(exclude_unset=True)
         
-        # Increment version when updating content
+        # Increment version when updating content or title
+        version_incremented = False
         if "content" in update_data or "title" in update_data:
             db_document.version += 1
+            version_incremented = True
         
+        # Apply updates
         for field, value in update_data.items():
             if field != "version":  # Skip version field as we handle it above
                 setattr(db_document, field, value)
+        
+        # Create history entry if version was incremented
+        if version_incremented:
+            # Generate change summary
+            change_summary = self._generate_change_summary(
+                original_content, 
+                db_document.content,
+                original_title,
+                db_document.title
+            )
+            
+            self._create_history_entry(
+                document_id=document_id,
+                version_number=db_document.version,
+                title=db_document.title,
+                content=db_document.content,
+                document_type=db_document.document_type,
+                placeholders=db_document.placeholders,
+                change_summary=change_summary,
+                parent_version=original_version,
+                created_by=updated_by
+            )
         
         self.db.commit()
         self.db.refresh(db_document)
@@ -177,3 +221,74 @@ class DocumentService:
                 position += 1  # For embedded objects
         
         return placeholders
+    
+    def _create_history_entry(
+        self,
+        document_id: str,
+        version_number: int,
+        title: str,
+        content: Dict[str, Any],
+        document_type: str,
+        placeholders: Optional[Dict[str, Any]] = None,
+        change_summary: Optional[str] = None,
+        parent_version: Optional[int] = None,
+        created_by: Optional[str] = None
+    ) -> DocumentHistory:
+        """Create a document history entry"""
+        
+        history_entry = DocumentHistory(
+            document_id=document_id,
+            version_number=version_number,
+            title=title,
+            content=content,
+            document_type=document_type,
+            placeholders=placeholders,
+            change_summary=change_summary,
+            parent_version=parent_version,
+            created_by=created_by
+        )
+        
+        self.db.add(history_entry)
+        return history_entry
+    
+    def _generate_change_summary(
+        self,
+        old_content: Dict[str, Any],
+        new_content: Dict[str, Any],
+        old_title: str,
+        new_title: str
+    ) -> str:
+        """Generate a human-readable summary of changes"""
+        
+        changes = []
+        
+        # Check title changes
+        if old_title != new_title:
+            changes.append(f"Title updated from '{old_title}' to '{new_title}'")
+        
+        # Use comparison service to analyze content changes
+        try:
+            comparison_service = DocumentComparisonService()
+            comparison_result = comparison_service.compare_documents(old_content, new_content)
+            
+            if comparison_result.total_changes > 0:
+                change_parts = []
+                if comparison_result.added_text > 0:
+                    change_parts.append(f"{comparison_result.added_text} characters added")
+                if comparison_result.deleted_text > 0:
+                    change_parts.append(f"{comparison_result.deleted_text} characters removed")
+                if comparison_result.modified_text > 0:
+                    change_parts.append(f"{comparison_result.modified_text} characters modified")
+                
+                if change_parts:
+                    changes.append(f"Content changes: {', '.join(change_parts)}")
+                
+                # Add similarity score
+                similarity_pct = int(comparison_result.similarity_score * 100)
+                changes.append(f"Document similarity: {similarity_pct}%")
+        
+        except Exception as e:
+            # Fallback to simple change detection
+            changes.append("Content updated")
+        
+        return "; ".join(changes) if changes else "Document updated"
