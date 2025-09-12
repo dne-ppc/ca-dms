@@ -1,0 +1,382 @@
+/* Enhanced Signature Blot Styles */
+.ql-enhanced-signature {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 4px solid #f59e0b;
+}
+
+.ql-enhanced-signature .placeholder-content {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #f59e0b;
+}
+
+/* Signature Content */
+.signature-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.signature-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signature-label::before {
+  content: "✍️";
+  font-size: 16px;
+}
+
+/* Signature Area Styles */
+.signature-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.signature-area:hover {
+  border-color: #9ca3af;
+  background: #ffffff;
+}
+
+/* Line Style Signature */
+.signature-line {
+  position: relative;
+  padding: 8px 0;
+}
+
+.signature-input.line-style {
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid #374151;
+  background: transparent;
+  font-size: 16px;
+  font-family: 'Dancing Script', cursive, serif;
+  padding: 8px 4px;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.signature-input.line-style:focus {
+  border-bottom-color: #3b82f6;
+}
+
+.signature-input.line-style::placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Box Style Signature */
+.signature-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.signature-canvas {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: crosshair;
+  touch-action: none;
+  background: #ffffff;
+}
+
+.signature-canvas:hover {
+  border-color: #9ca3af;
+}
+
+.signature-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.signature-controls button {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.signature-controls button:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.clear-signature:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.save-signature:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+/* Image Style Signature */
+.signature-image-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.signature-image-upload:hover {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.signature-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 60px;
+  justify-content: center;
+}
+
+.signature-image {
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.upload-prompt {
+  color: #6b7280;
+  font-size: 14px;
+  text-align: center;
+}
+
+.upload-signature {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.upload-signature:hover {
+  background: #2563eb;
+}
+
+.upload-signature:active {
+  transform: translateY(1px);
+}
+
+/* Form Fields */
+.signature-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.signature-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.signature-field-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.signature-field-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.signature-field-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Field Validation Styles */
+.signature-field-input.field-valid {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.signature-field-input.field-invalid {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.field-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field-error::before {
+  content: "⚠️";
+  font-size: 12px;
+}
+
+/* Preset Badge */
+.signature-preset-badge {
+  position: absolute;
+  top: 8px;
+  left: 64px;
+  background: #1f2937;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+
+/* Preset Specific Styles */
+.ql-enhanced-signature[data-preset="executive"] {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-left-color: #1f2937;
+}
+
+.ql-enhanced-signature[data-preset="executive"] .placeholder-content {
+  border-color: #1f2937;
+  padding: 20px;
+}
+
+.ql-enhanced-signature[data-preset="witness"] {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-left-color: #10b981;
+}
+
+.ql-enhanced-signature[data-preset="witness"] .placeholder-content {
+  border-color: #10b981;
+}
+
+.ql-enhanced-signature[data-preset="custom"] {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border-left-color: #8b5cf6;
+}
+
+.ql-enhanced-signature[data-preset="custom"] .placeholder-content {
+  border-color: #8b5cf6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .signature-content {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .signature-canvas {
+    width: 280px;
+    height: 80px;
+  }
+  
+  .signature-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .signature-field {
+    margin-bottom: 8px;
+  }
+  
+  .signature-preset-badge {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .signature-controls,
+  .upload-signature,
+  .placeholder-drag-handle,
+  .placeholder-config-button,
+  .placeholder-delete-button,
+  .placeholder-resize-handle {
+    display: none !important;
+  }
+  
+  .signature-area {
+    border-style: solid;
+    border-color: #000000;
+  }
+  
+  .signature-input.line-style {
+    border-bottom: 2px solid #000000;
+  }
+  
+  .signature-canvas {
+    border: 1px solid #000000;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .signature-field-input.field-valid {
+    border-color: #000000;
+    background: #ffffff;
+  }
+  
+  .signature-field-input.field-invalid {
+    border-color: #000000;
+    background: #ffffff;
+  }
+  
+  .signature-controls button {
+    border: 2px solid #000000;
+    background: #ffffff;
+    color: #000000;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .signature-area,
+  .signature-field-input,
+  .signature-controls button,
+  .upload-signature {
+    transition: none;
+  }
+}

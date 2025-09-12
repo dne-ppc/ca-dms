@@ -3,8 +3,8 @@
 This document tracks UI bugs, functionality issues, and improvement suggestions for the CA-DMS system.
 
 **Issue Tracking Status: ACTIVE**
-- Total Issues: 12
-- Open Issues: 4 
+- Total Issues: 13
+- Open Issues: 5 
 - Resolved Issues: 8
 - In Progress: 0
 
@@ -126,6 +126,35 @@ It should not have unsaved edits
 
 #### Steps to Reproduce
 1. click edit. close editor. open editor -> unsaved changes
+
+#### Environment
+- Browser: Not specified
+- Screen Size: Not specified
+- User Role: Not specified
+- OS: Not specified
+
+#### Additional Context
+*None*
+
+---
+
+### Issue 001: import error
+
+**Status:** Open
+**Priority:** Critical
+**Type:** Bug
+
+#### Screenshot
+![import error]('/home/david/Pictures/Screenshots/Screenshot from 2025-09-12 13-32-33.png')
+
+#### Current Behavior
+load blank screen, react dev tool caught error
+
+#### Expected Behavior
+normal load
+
+#### Steps to Reproduce
+1. load
 
 #### Environment
 - Browser: Not specified
@@ -652,7 +681,7 @@ Implemented comprehensive CSS variable integration across all editor components:
 
 | Type | Open | In Progress | Resolved | Total |
 |------|------|-------------|----------|-------|
-| Bug | 3 | 0 | 2 | 5 |
+| Bug | 4 | 0 | 2 | 6 |
 | Enhancement | 1 | 0 | 1 | 2 |
 | UI/UX | 1 | 0 | 4 | 5 |
 | Performance | 0 | 0 | 0 | 0 |

@@ -1,0 +1,334 @@
+/* Draggable Placeholder Styles */
+.ql-draggable-placeholder {
+  position: relative;
+  margin: 8px 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  min-height: 40px;
+}
+
+.ql-draggable-placeholder:hover {
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ql-draggable-placeholder.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.ql-draggable-placeholder.resizing {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Placeholder Wrapper */
+.placeholder-wrapper {
+  position: relative;
+  padding: 12px;
+  width: 100%;
+  height: 100%;
+}
+
+/* Drag Handle */
+.placeholder-drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.placeholder-wrapper:hover .placeholder-drag-handle {
+  opacity: 1;
+}
+
+.placeholder-drag-handle:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+.placeholder-drag-handle:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+.placeholder-drag-handle svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Resize Handle */
+.placeholder-resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+  line-height: 1;
+}
+
+.placeholder-wrapper:hover .placeholder-resize-handle {
+  opacity: 1;
+}
+
+.placeholder-resize-handle:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+/* Control Buttons */
+.placeholder-config-button,
+.placeholder-delete-button {
+  position: absolute;
+  top: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+  line-height: 1;
+}
+
+.placeholder-config-button {
+  right: 36px;
+}
+
+.placeholder-delete-button {
+  right: 8px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.placeholder-wrapper:hover .placeholder-config-button,
+.placeholder-wrapper:hover .placeholder-delete-button {
+  opacity: 1;
+}
+
+.placeholder-config-button:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+.placeholder-delete-button:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: #ffffff;
+}
+
+.placeholder-config-button:active,
+.placeholder-delete-button:active {
+  transform: scale(0.95);
+}
+
+/* Content Container */
+.placeholder-content {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  min-height: 40px;
+}
+
+/* Validation Indicator */
+.placeholder-validation-indicator {
+  position: absolute;
+  top: 8px;
+  left: 32px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.placeholder-validation-indicator.required {
+  opacity: 1;
+  background: #f59e0b;
+}
+
+.placeholder-validation-indicator.invalid {
+  background: #ef4444;
+  animation: pulse 1.5s infinite;
+}
+
+.placeholder-wrapper:hover .placeholder-validation-indicator {
+  opacity: 1;
+}
+
+/* Required Placeholder Styling */
+.required-placeholder {
+  border-left: 4px solid #f59e0b;
+}
+
+.required-placeholder .placeholder-content::before {
+  content: "*";
+  color: #f59e0b;
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+/* Invalid Placeholder Styling */
+.invalid-placeholder {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.invalid-placeholder .placeholder-content {
+  border-color: #ef4444;
+  background: rgba(254, 226, 226, 0.5);
+}
+
+/* Drop Zone Indicators */
+.drop-target-above::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #3b82f6;
+  border-radius: 2px;
+  z-index: 1000;
+}
+
+.drop-target-below::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #3b82f6;
+  border-radius: 2px;
+  z-index: 1000;
+}
+
+/* Drag Preview */
+.drag-preview {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.7;
+  transform: rotate(5deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation Keyframes */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .placeholder-drag-handle,
+  .placeholder-resize-handle,
+  .placeholder-config-button,
+  .placeholder-delete-button {
+    width: 24px;
+    height: 24px;
+    opacity: 1;
+  }
+  
+  .placeholder-config-button {
+    right: 32px;
+  }
+  
+  .placeholder-drag-handle {
+    left: 4px;
+  }
+  
+  .placeholder-validation-indicator {
+    left: 32px;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .ql-draggable-placeholder {
+    border-width: 3px;
+    border-color: #000000;
+  }
+  
+  .placeholder-drag-handle,
+  .placeholder-resize-handle,
+  .placeholder-config-button,
+  .placeholder-delete-button {
+    border-width: 2px;
+    border-color: #000000;
+    background: #ffffff;
+    color: #000000;
+  }
+  
+  .placeholder-validation-indicator.invalid {
+    background: #000000;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .ql-draggable-placeholder,
+  .placeholder-drag-handle,
+  .placeholder-resize-handle,
+  .placeholder-config-button,
+  .placeholder-delete-button,
+  .placeholder-validation-indicator {
+    transition: none;
+  }
+  
+  .placeholder-validation-indicator.invalid {
+    animation: none;
+  }
+  
+  .ql-draggable-placeholder.dragging {
+    transform: none;
+  }
+}
