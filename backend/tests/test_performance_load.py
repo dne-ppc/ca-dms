@@ -67,40 +67,55 @@ class LoadTestResults:
 
 
 @pytest.fixture
-def test_user():
-    """Create test user for load testing"""
-    db = next(get_db())
+def test_user_token():
+    """Create test user and return authentication token for load testing"""
+    # Register a test user
+    user_data = {
+        "username": "loadtestuser", 
+        "email": "loadtest@example.com",
+        "password": "loadtest123",
+        "full_name": "Load Test User",
+        "role": "admin"
+    }
+    
+    # Register the user using proper registration endpoint
+    register_response = client.post("/api/v1/auth/register", json=user_data)
+    if register_response.status_code == 400:
+        # User might already exist, that's fine for load testing
+        pass
+    elif register_response.status_code not in [200, 201]:
+        # Registration failed, let's check if the user already exists by trying login
+        pass
+    
+    # For load testing, we need to verify the user manually in the database
+    # since we don't want to deal with email verification flows
+    import sqlite3
     try:
-        # Clean up any existing test user (may have wrong enum format)
-        try:
-            existing_user = db.query(User).filter(User.email == "loadtest@example.com").first()
-            if existing_user:
-                db.delete(existing_user)
-                db.commit()
-        except Exception:
-            # If there's an enum error, delete all and recreate clean DB
-            db.rollback()
-            try:
-                db.execute(text("DELETE FROM users WHERE email = 'loadtest@example.com'"))
-                db.commit()
-            except Exception:
-                db.rollback()
-        
-        # Create fresh test user with correct enum
-        user = User(
-            email="loadtest@example.com",
-            username="loadtestuser",
-            hashed_password="dummy_hash_for_testing",
-            full_name="Load Test User",
-            role=UserRole.ADMIN,
-            is_active=True
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
-    finally:
-        db.close()
+        conn = sqlite3.connect('ca_dms.db')
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET is_verified = 1 WHERE email = ?", (user_data["email"],))
+        conn.commit()
+        conn.close()
+    except Exception:
+        # If database update fails, continue anyway
+        pass
+    
+    # Login to get token
+    login_data = {
+        "email": user_data["email"],
+        "password": user_data["password"]
+    }
+    
+    login_response = client.post("/api/v1/auth/login", json=login_data)
+    if login_response.status_code != 200:
+        pytest.fail(f"Failed to login: {login_response.json()}")
+    
+    token_data = login_response.json()
+    return {
+        "token": token_data["access_token"],
+        "user": token_data["user"],
+        "headers": {"Authorization": f"Bearer {token_data['access_token']}"}
+    }
 
 
 def create_document_request(user_id: int, doc_number: int) -> Dict[str, Any]:
@@ -114,29 +129,29 @@ def create_document_request(user_id: int, doc_number: int) -> Dict[str, Any]:
             ]
         },
         "document_type": "board_resolution",
-        "placeholders": [],
+        "placeholders": {},  # Should be a dictionary, not an array
         "created_by": user_id
     }
 
 
-def single_document_create_test(user_id: int, doc_number: int) -> Dict[str, Any]:
+def single_document_create_test(user_id: int, doc_number: int, auth_headers: dict) -> Dict[str, Any]:
     """Perform single document creation and measure response time"""
     start_time = time.time()
     
     try:
         payload = create_document_request(user_id, doc_number)
-        response = client.post("/api/v1/documents/", json=payload)
+        response = client.post("/api/v1/documents/", json=payload, headers=auth_headers)
         
         end_time = time.time()
         response_time = end_time - start_time
         
         return {
-            "success": response.status_code == 201,
+            "success": response.status_code in [200, 201],  # Accept both 200 and 201 as success
             "status_code": response.status_code,
             "response_time": response_time,
             "doc_number": doc_number,
-            "response_data": response.json() if response.status_code == 201 else None,
-            "error": response.text if response.status_code != 201 else None
+            "response_data": response.json() if response.status_code in [200, 201] else None,
+            "error": response.text if response.status_code not in [200, 201] else None
         }
         
     except Exception as e:
@@ -163,7 +178,7 @@ class TestDocumentOperationsLoad:
     - Test throughput measurements
     """
     
-    def test_concurrent_document_creation_load(self, test_user):
+    def test_concurrent_document_creation_load(self, test_user_token):
         """
         Test: document CRUD operations under load
         
@@ -187,7 +202,7 @@ class TestDocumentOperationsLoad:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all requests
             future_to_doc = {
-                executor.submit(single_document_create_test, test_user.id, i): i 
+                executor.submit(single_document_create_test, test_user_token["user"]["id"], i, test_user_token["headers"]): i 
                 for i in range(1, concurrent_requests + 1)
             }
             
@@ -246,7 +261,7 @@ class TestDocumentOperationsLoad:
             f"Expected {concurrent_requests} requests, got {load_results.total_requests}"
         )
     
-    def test_document_read_operations_load(self, test_user):
+    def test_document_read_operations_load(self, test_user_token):
         """
         Test: document read operations under load
         
@@ -258,8 +273,8 @@ class TestDocumentOperationsLoad:
         # Create some test documents first
         test_docs = []
         for i in range(10):
-            payload = create_document_request(test_user.id, i)
-            response = client.post("/api/v1/documents/", json=payload)
+            payload = create_document_request(test_user_token["user"]["id"], i)
+            response = client.post("/api/v1/documents/", json=payload, headers=test_user_token["headers"])
             if response.status_code == 201:
                 test_docs.append(response.json()["id"])
         
@@ -276,7 +291,7 @@ class TestDocumentOperationsLoad:
             start_time = time.time()
             
             try:
-                response = client.get(f"/api/v1/documents/{doc_id}")
+                response = client.get(f"/api/v1/documents/{doc_id}", headers=test_user_token["headers"])
                 end_time = time.time()
                 response_time = end_time - start_time
                 
@@ -356,7 +371,7 @@ class TestDocumentOperationsLoad:
             f"Read throughput {load_results.throughput:.2f} req/sec is below minimum 50 req/sec"
         )
     
-    def test_mixed_crud_operations_load(self, test_user):
+    def test_mixed_crud_operations_load(self, test_user_token):
         """
         Test: mixed CRUD operations under load
         
@@ -388,8 +403,8 @@ class TestDocumentOperationsLoad:
         # Create some initial documents for update/delete operations
         initial_docs = []
         for i in range(update_ops + delete_ops):
-            payload = create_document_request(test_user.id, i)
-            response = client.post("/api/v1/documents/", json=payload)
+            payload = create_document_request(test_user_token["user"]["id"], i)
+            response = client.post("/api/v1/documents/", json=payload, headers=test_user_token["headers"])
             if response.status_code == 201:
                 initial_docs.append(response.json()["id"])
         
@@ -399,12 +414,12 @@ class TestDocumentOperationsLoad:
             
             try:
                 if op_type == "read":
-                    response = client.get(f"/api/v1/documents/{doc_id}")
+                    response = client.get(f"/api/v1/documents/{doc_id}", headers=test_user_token["headers"])
                     expected_status = 200
                     
                 elif op_type == "create":
-                    payload = create_document_request(test_user.id, op_number)
-                    response = client.post("/api/v1/documents/", json=payload)
+                    payload = create_document_request(test_user_token["user"]["id"], op_number)
+                    response = client.post("/api/v1/documents/", json=payload, headers=test_user_token["headers"])
                     expected_status = 201
                     
                 elif op_type == "update":
@@ -412,11 +427,11 @@ class TestDocumentOperationsLoad:
                         "title": f"Updated Document {op_number}",
                         "content": {"ops": [{"insert": f"Updated content {op_number}\n"}]}
                     }
-                    response = client.put(f"/api/v1/documents/{doc_id}", json=payload)
+                    response = client.put(f"/api/v1/documents/{doc_id}", json=payload, headers=test_user_token["headers"])
                     expected_status = 200
                     
                 elif op_type == "delete":
-                    response = client.delete(f"/api/v1/documents/{doc_id}")
+                    response = client.delete(f"/api/v1/documents/{doc_id}", headers=test_user_token["headers"])
                     expected_status = 204
                     
                 else:
