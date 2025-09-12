@@ -744,4 +744,3 @@ class WorkflowConditionService:
 
     # Import required models after class definition
     from app.models.workflow import WorkflowStep
-    from app.models.workflow_conditions import StepInstanceStatus
