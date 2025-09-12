@@ -2,7 +2,7 @@
 API v1 router configuration
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import documents, auth, workflows
+from app.api.v1.endpoints import documents, auth, workflows, websockets
 
 api_router = APIRouter()
 
@@ -14,3 +14,6 @@ api_router.include_router(documents.router, prefix="/documents", tags=["Document
 
 # Include workflow routes
 api_router.include_router(workflows.router, prefix="/workflows", tags=["Workflows"])
+
+# Include WebSocket routes
+api_router.include_router(websockets.router, tags=["WebSockets"])
