@@ -1,0 +1,84 @@
+.font-scale-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--bg-secondary, #f5f5f5);
+  color: var(--text-primary, #333);
+  border: 1px solid var(--border-primary, #ddd);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.font-scale-toggle:hover {
+  background-color: var(--bg-accent, #e9ecef);
+  border-color: var(--border-accent, #999);
+}
+
+.font-scale-toggle:focus {
+  outline: 3px solid var(--accent-primary, #4A90E2);
+  outline-offset: 2px;
+}
+
+.font-scale-icon {
+  font-weight: bold;
+  font-family: monospace;
+  min-width: 24px;
+  text-align: center;
+}
+
+.font-scale-label {
+  white-space: nowrap;
+}
+
+/* Theme-specific styles */
+[data-theme="dark"] .font-scale-toggle {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .font-scale-toggle:hover {
+  background-color: var(--bg-accent);
+  border-color: var(--border-accent);
+}
+
+[data-theme="high-contrast"] .font-scale-toggle {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  font-weight: bold;
+}
+
+[data-theme="high-contrast"] .font-scale-toggle:hover {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+[data-theme="high-contrast"] .font-scale-toggle:focus {
+  outline: 4px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .font-scale-toggle .font-scale-label {
+    display: none;
+  }
+  
+  .font-scale-toggle {
+    padding: 8px;
+    min-width: 40px;
+    justify-content: center;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .font-scale-toggle {
+    transition: none;
+  }
+}

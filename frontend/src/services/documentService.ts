@@ -31,6 +31,53 @@ export interface BulkCreateResult {
   errors?: string[]
 }
 
+// Advanced search types
+export interface SearchHighlight {
+  field: string
+  content: string
+}
+
+export interface SearchResult {
+  document: any // Use any for now to handle backend format
+  relevance_score: number
+  highlights: SearchHighlight[]
+  preview?: string
+}
+
+export interface SearchStatistics {
+  total_matches: number
+  search_time_ms: number
+  document_type_breakdown: Record<string, number>
+  query?: string
+  timestamp: string
+}
+
+export interface AdvancedSearchResponse {
+  results: SearchResult[]
+  total: number
+  query?: string
+  statistics?: SearchStatistics
+  offset: number
+  limit: number
+}
+
+export interface AdvancedSearchParams {
+  query?: string
+  documentType?: string
+  createdBy?: string
+  createdAfter?: string
+  createdBefore?: string
+  sortBy?: 'relevance' | 'created_at' | 'title'
+  sortOrder?: 'asc' | 'desc'
+  limit?: number
+  offset?: number
+  highlight?: boolean
+  contextLength?: number
+  searchPlaceholders?: boolean
+  fuzzy?: boolean
+  includeStats?: boolean
+}
+
 // Utility function for retry logic
 const retry = async <T>(
   fn: () => Promise<T>,
@@ -209,5 +256,45 @@ export const documentService = {
       throw new Error(response.message || 'Failed to search documents')
     }
     return response.data || []
+  },
+
+  // Advanced search with full-text, filtering, and highlighting
+  async advancedSearch(params: AdvancedSearchParams): Promise<AdvancedSearchResponse> {
+    const searchParams = new URLSearchParams()
+    
+    if (params.query) searchParams.append('query', params.query)
+    if (params.documentType) searchParams.append('document_type', params.documentType)
+    if (params.createdBy) searchParams.append('created_by', params.createdBy)
+    if (params.createdAfter) searchParams.append('created_after', params.createdAfter)
+    if (params.createdBefore) searchParams.append('created_before', params.createdBefore)
+    if (params.sortBy) searchParams.append('sort_by', params.sortBy)
+    if (params.sortOrder) searchParams.append('sort_order', params.sortOrder)
+    if (params.limit) searchParams.append('limit', params.limit.toString())
+    if (params.offset) searchParams.append('offset', params.offset.toString())
+    if (params.highlight) searchParams.append('highlight', params.highlight.toString())
+    if (params.contextLength) searchParams.append('context_length', params.contextLength.toString())
+    if (params.searchPlaceholders !== undefined) searchParams.append('search_placeholders', params.searchPlaceholders.toString())
+    if (params.fuzzy) searchParams.append('fuzzy', params.fuzzy.toString())
+    if (params.includeStats) searchParams.append('include_stats', params.includeStats.toString())
+
+    const url = `/documents/advanced-search?${searchParams}`
+    try {
+      const response = await apiClient.get<AdvancedSearchResponse>(url)
+      
+      // Handle direct response from backend (FastAPI returns data directly)
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response as AdvancedSearchResponse
+      }
+      
+      // Handle wrapped response format
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to perform advanced search')
+      }
+      return response.data
+    } catch (error) {
+      // Enhanced error handling for debugging
+      console.error('Advanced search error:', error)
+      throw new Error(error instanceof Error ? error.message : 'Failed to perform advanced search')
+    }
   },
 }

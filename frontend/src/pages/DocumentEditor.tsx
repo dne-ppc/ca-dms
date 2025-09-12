@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import PDFModal from '../components/pdf/PDFModal'
+import { SimpleRichTextEditor } from '../components/editor/SimpleRichTextEditor'
+import { tempStorageService } from '../services/tempStorageService'
 
 interface Document {
   id: string
@@ -23,6 +26,7 @@ const DocumentEditor = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
+  const [isPDFModalOpen, setIsPDFModalOpen] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -68,13 +72,42 @@ const DocumentEditor = () => {
       const response = await fetch(`http://localhost:8000/api/v1/documents/${docId}`)
       if (response.ok) {
         const doc: Document = await response.json()
-        setTitle(doc.title)
-        setDocumentType(doc.document_type)
-        // Convert Quill delta ops to plain text
-        const text = doc.content.ops?.map(op => op.insert).join('') || ''
-        setContent(text)
-        setHasUnsavedChanges(false)
-        setLastSaved(new Date())
+        
+        // Check if there's newer temp data
+        const tempData = tempStorageService.getTempDocument(docId)
+        const documentLastUpdated = new Date(doc.version || Date.now()) // Use version as timestamp proxy
+        
+        if (tempData && tempStorageService.isTempDocumentNewer(docId, documentLastUpdated)) {
+          // Show temp recovery option
+          const shouldUseTempData = window.confirm(
+            `Found unsaved changes from ${new Date(tempData.savedAt).toLocaleString()}. ` +
+            'Would you like to restore these changes?'
+          )
+          
+          if (shouldUseTempData) {
+            setTitle(tempData.title)
+            setDocumentType(tempData.documentType)
+            setContent(tempData.content)
+            setHasUnsavedChanges(true)
+            setSaveMessage('Restored from unsaved changes')
+            setTimeout(() => setSaveMessage(''), 3000)
+          } else {
+            // User chose to discard temp data
+            tempStorageService.clearTempDocument(docId)
+            setTitle(doc.title)
+            setDocumentType(doc.document_type)
+            setContent(JSON.stringify(doc.content))
+            setHasUnsavedChanges(false)
+            setLastSaved(new Date())
+          }
+        } else {
+          // No temp data or temp data is older
+          setTitle(doc.title)
+          setDocumentType(doc.document_type)
+          setContent(JSON.stringify(doc.content))
+          setHasUnsavedChanges(false)
+          setLastSaved(new Date())
+        }
       } else {
         setSaveMessage('Error loading document')
       }
@@ -91,36 +124,27 @@ const DocumentEditor = () => {
     try {
       setIsSaving(true)
       
-      const deltaContent = {
-        ops: [{ insert: content + '\n' }]
-      }
-
-      const documentData = {
-        title: title.trim(),
-        content: deltaContent,
-        document_type: documentType,
-        placeholders: {
-          signatures: [],
-          longResponses: [],
-          lineSegments: [],
-          versionTables: []
+      // Parse content as Delta if it's JSON, otherwise create simple Delta
+      let deltaContent
+      try {
+        deltaContent = JSON.parse(content)
+      } catch {
+        deltaContent = {
+          ops: [{ insert: content + '\n' }]
         }
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(documentData)
+      // Save to temp storage instead of directly updating document version
+      tempStorageService.saveTempDocument(id, {
+        title: title.trim(),
+        content: JSON.stringify(deltaContent),
+        documentType: documentType
       })
 
-      if (response.ok) {
-        setHasUnsavedChanges(false)
-        setLastSaved(new Date())
-        setSaveMessage('Auto-saved')
-        setTimeout(() => setSaveMessage(''), 2000)
-      }
+      setHasUnsavedChanges(false)
+      setLastSaved(new Date())
+      setSaveMessage('Auto-saved to drafts')
+      setTimeout(() => setSaveMessage(''), 2000)
     } catch (error) {
       // Silent fail for auto-save to avoid interrupting user
       console.error('Auto-save failed:', error)
@@ -139,9 +163,14 @@ const DocumentEditor = () => {
     setSaveMessage('')
 
     try {
-      // Convert plain text to Quill delta format
-      const deltaContent = {
-        ops: [{ insert: content + '\n' }]
+      // Parse content as Delta if it's JSON, otherwise create simple Delta
+      let deltaContent
+      try {
+        deltaContent = JSON.parse(content)
+      } catch {
+        deltaContent = {
+          ops: [{ insert: content + '\n' }]
+        }
       }
 
       const documentData = {
@@ -172,6 +201,12 @@ const DocumentEditor = () => {
 
       if (response.ok) {
         const result = await response.json()
+        
+        // Clear temp storage when document version is successfully saved
+        if (id) {
+          tempStorageService.clearTempDocument(id)
+        }
+        
         setSaveMessage('Document saved successfully!')
         setHasUnsavedChanges(false)
         setLastSaved(new Date())
@@ -197,9 +232,18 @@ const DocumentEditor = () => {
 
   const previewPDF = () => {
     if (id) {
-      window.open(`http://localhost:8000/api/v1/documents/${id}/pdf`, '_blank')
+      setIsPDFModalOpen(true)
     } else {
       setSaveMessage('Please save the document first to preview PDF')
+      setTimeout(() => setSaveMessage(''), 3000)
+    }
+  }
+
+  const downloadPDF = () => {
+    if (id) {
+      window.open(`http://localhost:8000/api/v1/documents/${id}/pdf`, '_blank')
+    } else {
+      setSaveMessage('Please save the document first to download PDF')
       setTimeout(() => setSaveMessage(''), 3000)
     }
   }
@@ -274,14 +318,13 @@ const DocumentEditor = () => {
           
           <div className="form-group">
             <label htmlFor="content">Content</label>
-            <textarea 
-              id="content"
-              value={content} 
-              onChange={(e) => setContent(e.target.value)}
-              className="content-textarea"
-              rows={20}
-              placeholder="Start typing your document content..."
-              disabled={isSaving}
+            <SimpleRichTextEditor 
+              initialContent={content}
+              onChange={setContent}
+              readOnly={isSaving}
+              onInsertPlaceholder={(type) => {
+                console.log(`Placeholder inserted: ${type}`)
+              }}
             />
           </div>
           
@@ -300,6 +343,13 @@ const DocumentEditor = () => {
             >
               Preview PDF
             </button>
+            <button 
+              className="download-button"
+              onClick={downloadPDF}
+              disabled={!id}
+            >
+              Download PDF
+            </button>
             {id && (
               <button 
                 className="delete-button"
@@ -317,6 +367,23 @@ const DocumentEditor = () => {
           </div>
         </div>
       </main>
+
+      {/* PDF Preview Modal */}
+      <PDFModal 
+        isOpen={isPDFModalOpen}
+        onClose={() => setIsPDFModalOpen(false)}
+        pdfUrl={`http://localhost:8000/api/v1/documents/${id}/pdf`}
+        documentTitle={title}
+        documentId={id}
+        onDownloadSuccess={(result) => {
+          setSaveMessage(`PDF downloaded successfully: ${result.filename}`)
+          setTimeout(() => setSaveMessage(''), 3000)
+        }}
+        onDownloadError={(error) => {
+          setSaveMessage(`Download failed: ${error.message}`)
+          setTimeout(() => setSaveMessage(''), 3000)
+        }}
+      />
     </div>
   )
 }

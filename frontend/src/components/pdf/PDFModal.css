@@ -1,0 +1,229 @@
+/* PDF Modal Backdrop */
+.pdf-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Modal Container */
+.pdf-modal-container {
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 90vw;
+  height: 85vh;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+}
+
+/* Modal Header */
+.pdf-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-primary);
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.pdf-modal-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pdf-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-modal-close:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.pdf-modal-close:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Modal Content */
+.pdf-modal-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* PDF Preview in Modal */
+.modal-pdf-preview {
+  height: 100%;
+  width: 100%;
+}
+
+.modal-pdf-preview .pdf-document-container {
+  height: calc(100% - 60px); /* Account for download section */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+}
+
+.modal-pdf-preview .pdf-download-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-primary);
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modal-pdf-preview .pdf-download-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.modal-pdf-preview .pdf-download-button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.modal-pdf-preview .pdf-download-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modal-pdf-preview .pdf-download-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.modal-pdf-preview .pdf-download-error {
+  color: var(--danger-color);
+  font-size: 0.875rem;
+}
+
+/* PDF Page Styling in Modal */
+.modal-pdf-preview .pdf-page-container {
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: white;
+}
+
+.modal-pdf-preview .pdf-page-info {
+  background-color: var(--bg-tertiary);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.modal-pdf-preview .pdf-page-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Loading and Error States */
+.modal-pdf-preview .pdf-loading-container,
+.modal-pdf-preview .pdf-error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+}
+
+.modal-pdf-preview .pdf-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--border-secondary);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.modal-pdf-preview .pdf-error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.modal-pdf-preview .pdf-error-text,
+.modal-pdf-preview .pdf-loading-text {
+  font-size: 1rem;
+  text-align: center;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .pdf-modal-backdrop {
+    padding: 0.5rem;
+  }
+
+  .pdf-modal-container {
+    width: 95vw;
+    height: 90vh;
+  }
+
+  .pdf-modal-header {
+    padding: 1rem;
+  }
+
+  .pdf-modal-title {
+    font-size: 1.125rem;
+  }
+
+  .modal-pdf-preview .pdf-document-container {
+    padding: 0.5rem;
+  }
+
+  .modal-pdf-preview .pdf-download-section {
+    padding: 1rem;
+  }
+}

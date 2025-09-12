@@ -1,0 +1,212 @@
+/* Accessibility Styles - High Contrast Mode */
+
+/* High Contrast Theme */
+[data-theme="high-contrast"] {
+  --bg-primary: #000000;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --border-primary: #ffffff;
+  --border-secondary: #888888;
+  --accent-primary: #ffff00;
+  --accent-secondary: #00ffff;
+  --danger: #ff4444;
+  --success: #00ff00;
+  --warning: #ffff00;
+}
+
+[data-theme="high-contrast"] body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* High contrast buttons */
+[data-theme="high-contrast"] button {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  font-weight: bold;
+}
+
+[data-theme="high-contrast"] button:hover {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+[data-theme="high-contrast"] button:focus {
+  outline: 4px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast form inputs */
+[data-theme="high-contrast"] input,
+[data-theme="high-contrast"] select,
+[data-theme="high-contrast"] textarea {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  font-weight: bold;
+}
+
+[data-theme="high-contrast"] input:focus,
+[data-theme="high-contrast"] select:focus,
+[data-theme="high-contrast"] textarea:focus {
+  outline: 4px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast links */
+[data-theme="high-contrast"] a {
+  color: var(--accent-secondary);
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+[data-theme="high-contrast"] a:hover {
+  color: var(--accent-primary);
+  background-color: var(--bg-secondary);
+  padding: 2px;
+}
+
+[data-theme="high-contrast"] a:focus {
+  outline: 4px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast editor */
+[data-theme="high-contrast"] .ql-editor {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 3px solid var(--border-primary);
+}
+
+[data-theme="high-contrast"] .ql-toolbar {
+  background-color: var(--bg-secondary);
+  border: 3px solid var(--border-primary);
+}
+
+[data-theme="high-contrast"] .ql-toolbar button,
+[data-theme="high-contrast"] .ql-toolbar select {
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+}
+
+[data-theme="high-contrast"] .ql-toolbar button:hover,
+[data-theme="high-contrast"] .ql-toolbar select:hover {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+/* High contrast custom toolbar */
+[data-theme="high-contrast"] .custom-toolbar {
+  background-color: var(--bg-secondary);
+  border: 3px solid var(--border-primary);
+}
+
+[data-theme="high-contrast"] .ql-placeholder-btn {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  font-weight: bold;
+}
+
+[data-theme="high-contrast"] .ql-placeholder-btn:hover {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+/* High contrast sidebar */
+[data-theme="high-contrast"] .sidebar {
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+}
+
+[data-theme="high-contrast"] .sidebar-toggle {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  font-weight: bold;
+}
+
+/* High contrast main content */
+[data-theme="high-contrast"] .main-content-area {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* High contrast theme toggle */
+[data-theme="high-contrast"] .theme-toggle {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  font-weight: bold;
+}
+
+/* Font scaling support */
+.font-scale-small {
+  font-size: 0.875rem;
+}
+
+.font-scale-normal {
+  font-size: 1rem;
+}
+
+.font-scale-large {
+  font-size: 1.25rem;
+}
+
+.font-scale-extra-large {
+  font-size: 1.5rem;
+}
+
+/* Apply font scaling to all text elements */
+.font-scale-small * {
+  font-size: inherit;
+}
+
+.font-scale-normal * {
+  font-size: inherit;
+}
+
+.font-scale-large * {
+  font-size: inherit;
+}
+
+.font-scale-extra-large * {
+  font-size: inherit;
+}
+
+/* Motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* System high contrast detection */
+@media (prefers-contrast: high) {
+  :root {
+    --high-contrast-detected: true;
+  }
+}
+
+/* Skip links for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background-color: var(--accent-primary, #000);
+  color: var(--bg-primary, #fff);
+  padding: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 4px;
+  z-index: 1000;
+}
+
+.skip-link:focus {
+  top: 6px;
+  outline: 3px solid var(--accent-secondary, #fff);
+}

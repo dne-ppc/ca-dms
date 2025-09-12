@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Sidebar } from '../components/layout/Sidebar'
+import { MainContent } from '../components/layout/MainContent'
 
 interface Document {
   id: string
@@ -154,35 +156,29 @@ const Dashboard = () => {
   if (error) return <div className="dashboard error">Error: {error}</div>
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>CA-DMS Dashboard</h1>
-        <p>Welcome to the Community Association Document Management System</p>
-        <div className="dashboard-actions">
-          <Link to="/editor" className="create-button">
-            Create New Document
-          </Link>
-          <button 
-            onClick={toggleSelectMode} 
-            className={`select-mode-button ${selectMode ? 'active' : ''}`}
-          >
-            {selectMode ? 'Cancel Selection' : 'Select Documents'}
-          </button>
-          <button onClick={fetchDocuments} className="refresh-button" disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </div>
+    <>
+      <Sidebar title="Document Controls">
+        <div className="document-controls">
+          <div className="control-section">
+            <h4>Actions</h4>
+            <div className="dashboard-actions">
+              <Link to="/editor" className="create-button">
+                Create New Document
+              </Link>
+              <button 
+                onClick={toggleSelectMode} 
+                className={`select-mode-button ${selectMode ? 'active' : ''}`}
+              >
+                {selectMode ? 'Cancel Selection' : 'Select Documents'}
+              </button>
+              <button onClick={fetchDocuments} className="refresh-button" disabled={loading}>
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
 
-      <div className="documents-section">
-        <div className="section-header">
-          <h2>Documents ({filteredDocuments.length} of {documents.length})
-            {selectMode && selectedDocuments.length > 0 && (
-              <span className="selection-count"> - {selectedDocuments.length} selected</span>
-            )}
-          </h2>
-          
-          <div className="document-controls">
+          <div className="control-section">
+            <h4>Search & Filter</h4>
             <div className="search-box">
               <input
                 type="text"
@@ -217,8 +213,11 @@ const Dashboard = () => {
                 <option value="title">Title A-Z</option>
               </select>
             </div>
-            
-            {selectMode && (
+          </div>
+
+          {selectMode && (
+            <div className="control-section">
+              <h4>Bulk Actions</h4>
               <div className="bulk-actions">
                 <button 
                   onClick={selectAllDocuments}
@@ -242,9 +241,26 @@ const Dashboard = () => {
                   {bulkActionLoading ? 'Deleting...' : `Delete (${selectedDocuments.length})`}
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+      </Sidebar>
+
+      <MainContent>
+        <div className="dashboard">
+          <div className="dashboard-header">
+            <h1>CA-DMS Dashboard</h1>
+            <p>Welcome to the Community Association Document Management System</p>
+          </div>
+
+          <div className="documents-section">
+            <div className="section-header">
+              <h2>Documents ({filteredDocuments.length} of {documents.length})
+                {selectMode && selectedDocuments.length > 0 && (
+                  <span className="selection-count"> - {selectedDocuments.length} selected</span>
+                )}
+              </h2>
+            </div>
         
         {filteredDocuments.length === 0 && documents.length === 0 ? (
           <div className="empty-state">
@@ -319,10 +335,12 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
+            </div>
+          )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </MainContent>
+    </>
   )
 }
 

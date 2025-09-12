@@ -1,0 +1,53 @@
+/**
+ * Search Page Styles
+ */
+.search-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.search-header h1 {
+  font-size: 2.5rem;
+  color: var(--text-color, #111827);
+  margin-bottom: 10px;
+}
+
+.search-header p {
+  font-size: 1.1rem;
+  color: var(--text-muted, #6b7280);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.search-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.advanced-search-component {
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .search-page {
+    padding: 10px;
+  }
+  
+  .search-header h1 {
+    font-size: 2rem;
+  }
+  
+  .search-header p {
+    font-size: 1rem;
+  }
+}

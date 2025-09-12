@@ -1,15 +1,40 @@
 import { useEffect, useRef } from 'react'
-import Quill from 'quill'
-import 'quill/dist/quill.snow.css'
+import './QuillEditor.css'
 import { CustomToolbar } from './CustomToolbar'
-import { VersionTableBlot, VersionTableData } from './blots/VersionTableBlot'
-import { SignatureBlot, SignatureData } from './blots/SignatureBlot'
-import { LongResponseBlot, LongResponseData } from './blots/LongResponseBlot'
+import { useKeyboardNavigationContext } from '../../contexts/KeyboardNavigationContext'
+import useKeyboardNavigation from '../../hooks/useKeyboardNavigation'
 
-// Register custom blots
-Quill.register('formats/version-table', VersionTableBlot)
-Quill.register('formats/signature-field', SignatureBlot)
-Quill.register('formats/long-response', LongResponseBlot)
+// Dynamically import Quill to avoid SSR issues
+let Quill: any = null
+let Font: any = null  
+let Size: any = null
+
+const initializeQuill = async () => {
+  if (typeof window === 'undefined') return null
+  
+  try {
+    const QuillModule = await import('quill')
+    Quill = QuillModule.default
+    
+    // Import CSS
+    await import('quill/dist/quill.snow.css')
+    
+    // Configure font families
+    Font = Quill.import('formats/font')
+    Font.whitelist = ['serif', 'monospace', 'helvetica', 'arial', 'georgia', 'calibri']
+    Quill.register(Font, true)
+
+    // Configure font sizes  
+    Size = Quill.import('formats/size')
+    Size.whitelist = ['small', 'large', 'huge']
+    Quill.register(Size, true)
+
+    return Quill
+  } catch (error) {
+    console.error('Failed to initialize Quill:', error)
+    return null
+  }
+}
 
 interface QuillEditorProps {
   initialContent?: string
@@ -25,7 +50,9 @@ export const QuillEditor = ({
   onInsertPlaceholder,
 }: QuillEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const quillRef = useRef<Quill | null>(null)
+  const { registerEditor, focusToolbar } = useKeyboardNavigationContext()
 
   const handlePlaceholderInsertion = (type: string) => {
     const quill = quillRef.current
@@ -115,42 +142,86 @@ export const QuillEditor = ({
   useEffect(() => {
     if (!editorRef.current) return
 
-    // Initialize Quill editor with custom toolbar
-    const quill = new Quill(editorRef.current, {
-      theme: 'snow',
-      readOnly,
-      modules: {
-        toolbar: '#custom-toolbar',
-      },
-    })
-
-    quillRef.current = quill
-
-    // Set initial content if provided
-    if (initialContent) {
+    const initEditor = async () => {
       try {
-        const delta = JSON.parse(initialContent)
-        quill.setContents(delta)
-      } catch {
-        // If not valid JSON, treat as plain text
-        quill.setText(initialContent)
+        const QuillClass = await initializeQuill()
+        if (!QuillClass || !editorRef.current) return
+
+        // Initialize Quill editor with custom toolbar
+        const quill = new QuillClass(editorRef.current, {
+          theme: 'snow',
+          readOnly,
+          modules: {
+            toolbar: '#custom-toolbar',
+          },
+        })
+
+        quillRef.current = quill
+
+        // Set initial content if provided
+        if (initialContent) {
+          try {
+            const delta = JSON.parse(initialContent)
+            quill.setContents(delta)
+          } catch {
+            // If not valid JSON, treat as plain text
+            quill.setText(initialContent)
+          }
+        }
+
+        // Listen for content changes
+        const handleTextChange = () => {
+          const content = JSON.stringify(quill.getContents())
+          onChange?.(content)
+        }
+
+        quill.on('text-change', handleTextChange)
+
+        // Store cleanup function
+        quillRef.current.cleanup = () => {
+          quill.off('text-change', handleTextChange)
+        }
+      } catch (error) {
+        console.error('Error initializing Quill editor:', error)
       }
     }
 
-    // Listen for content changes
-    const handleTextChange = () => {
-      const content = JSON.stringify(quill.getContents())
-      onChange?.(content)
-    }
-
-    quill.on('text-change', handleTextChange)
+    initEditor()
 
     // Cleanup on unmount
     return () => {
-      quill.off('text-change', handleTextChange)
+      if (quillRef.current?.cleanup) {
+        quillRef.current.cleanup()
+      }
       quillRef.current = null
     }
   }, [initialContent, onChange, readOnly])
+
+  // Register editor for keyboard navigation
+  useEffect(() => {
+    registerEditor(containerRef.current)
+  }, [])
+
+  // Setup keyboard shortcuts
+  useKeyboardNavigation({
+    onAlt1: focusToolbar,
+    onCtrlS: () => {
+      // Trigger save functionality (if available)
+      console.log('Save shortcut pressed')
+    },
+    onCtrlZ: () => {
+      // Quill handles undo internally
+      if (quillRef.current && !readOnly) {
+        quillRef.current.history.undo()
+      }
+    },
+    onCtrlY: () => {
+      // Quill handles redo internally  
+      if (quillRef.current && !readOnly) {
+        quillRef.current.history.redo()
+      }
+    },
+  })
 
   // Combine internal placeholder handler with external one
   const handleCombinedPlaceholderInsertion = (type: string) => {
@@ -159,9 +230,28 @@ export const QuillEditor = ({
   }
 
   return (
-    <div className="quill-editor-container">
+    <div 
+      ref={containerRef}
+      className="quill-editor-container" 
+      role="main" 
+      aria-label="Document editor"
+    >
       <CustomToolbar onInsertPlaceholder={handleCombinedPlaceholderInsertion} />
-      <div ref={editorRef} data-testid="quill-editor" />
+      <div 
+        ref={editorRef} 
+        data-testid="quill-editor"
+        role="textbox"
+        aria-label={readOnly ? "Document content (read-only)" : "Document content (editable)"}
+        aria-multiline="true"
+        aria-describedby="editor-instructions"
+        tabIndex={readOnly ? -1 : 0}
+      />
+      <div id="editor-instructions" className="sr-only">
+        {readOnly 
+          ? "This is a read-only document. Use arrow keys to navigate through the content."
+          : "Rich text editor for document content. Use the toolbar above to format text and insert placeholders. Press Alt+1 to focus toolbar, Ctrl+S to save, Ctrl+Z to undo, Ctrl+Y to redo."
+        }
+      </div>
     </div>
   )
 }
