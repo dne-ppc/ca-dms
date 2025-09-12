@@ -429,6 +429,146 @@ def get_workflow_analytics(
     )
 
 
+# Enhanced Monitoring Endpoints
+@router.get("/monitoring/performance/{workflow_id}")
+def get_workflow_performance_metrics(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get performance metrics for a specific workflow (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    metrics = workflow_service.get_workflow_performance_metrics(workflow_id)
+    
+    if not metrics:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found or no performance data available"
+        )
+    
+    return metrics
+
+
+@router.get("/monitoring/approval-rates")
+def get_approval_rate_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get approval rate analytics (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    return workflow_service.get_approval_rate_analytics()
+
+
+@router.get("/monitoring/bottlenecks")
+def get_bottleneck_analysis(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get bottleneck analysis (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    return workflow_service.get_bottleneck_analysis()
+
+
+@router.get("/monitoring/user-performance")
+def get_user_performance_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get user performance metrics (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    return workflow_service.get_user_performance_metrics()
+
+
+@router.get("/monitoring/health")
+def get_workflow_health_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get workflow system health metrics (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    return workflow_service.get_workflow_health_metrics()
+
+
+@router.get("/monitoring/time-analytics")
+def get_time_based_analytics(
+    days: int = Query(default=30, ge=1, le=365),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get time-based workflow analytics (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    return workflow_service.get_time_based_analytics(days)
+
+
+@router.get("/monitoring/document-types")
+def get_document_type_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager)
+):
+    """Get document type specific analytics (Manager+ access)"""
+    workflow_service = WorkflowService(db)
+    return workflow_service.get_document_type_analytics()
+
+
+@router.post("/reports/generate")
+def generate_workflow_report(
+    start_date: datetime = Query(..., description="Report start date"),
+    end_date: datetime = Query(..., description="Report end date"), 
+    include_recommendations: bool = Query(default=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Generate comprehensive workflow report (Admin only)"""
+    if end_date <= start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date must be after start date"
+        )
+    
+    if (end_date - start_date).days > 365:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Report period cannot exceed 365 days"
+        )
+    
+    workflow_service = WorkflowService(db)
+    report = workflow_service.generate_workflow_report(
+        start_date, end_date, include_recommendations
+    )
+    
+    return report
+
+
+@router.get("/monitoring/realtime-status")
+def get_realtime_workflow_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_verified_user)
+):
+    """Get real-time workflow status for current user"""
+    workflow_service = WorkflowService(db)
+    
+    # Get user's pending approvals
+    pending_approvals = workflow_service.get_user_pending_approvals(current_user.id)
+    
+    # Get user's initiated workflows
+    my_workflows = workflow_service.get_workflow_instances(
+        limit=10,
+        initiated_by=current_user.id
+    )
+    
+    # Get overall system health if user has permission
+    system_health = {}
+    if current_user.has_permission("read"):
+        system_health = workflow_service.get_workflow_health_metrics()
+    
+    return {
+        "pending_approvals_count": len(pending_approvals),
+        "my_active_workflows": len([w for w in my_workflows if w.status == WorkflowInstanceStatus.IN_PROGRESS]),
+        "system_health": system_health,
+        "last_updated": datetime.utcnow().isoformat()
+    }
+
+
 # Workflow Templates (Future enhancement)
 @router.get("/templates")
 def get_workflow_templates(

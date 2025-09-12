@@ -375,6 +375,207 @@ class WorkflowService:
         
         self.db.commit()
     
+    # Enhanced Monitoring and Reporting Methods
+    def get_workflow_performance_metrics(self, workflow_id: str) -> Dict[str, Any]:
+        """Get performance metrics for a specific workflow"""
+        workflow = self.get_workflow(workflow_id)
+        if not workflow:
+            return {}
+        
+        instances = self.db.query(WorkflowInstance).filter(
+            WorkflowInstance.workflow_id == workflow_id
+        ).all()
+        
+        if not instances:
+            return {
+                "completion_rate": 0,
+                "average_completion_time": 0,
+                "bottleneck_steps": [],
+                "step_performance": {}
+            }
+        
+        completed = [i for i in instances if i.status == WorkflowInstanceStatus.COMPLETED]
+        completion_rate = len(completed) / len(instances) * 100
+        
+        # Calculate average completion time
+        if completed:
+            completion_times = []
+            for instance in completed:
+                if instance.completed_at:
+                    duration = instance.completed_at - instance.initiated_at
+                    completion_times.append(duration.total_seconds() / 3600)
+            avg_completion_time = sum(completion_times) / len(completion_times) if completion_times else 0
+        else:
+            avg_completion_time = 0
+        
+        # Analyze step performance
+        step_performance = {}
+        for step in workflow.steps:
+            step_instances = []
+            for instance in instances:
+                step_inst = next((si for si in instance.step_instances if si.step_id == step.id), None)
+                if step_inst:
+                    step_instances.append(step_inst)
+            
+            if step_instances:
+                completed_steps = [s for s in step_instances if s.status == StepInstanceStatus.COMPLETED]
+                avg_step_time = 0
+                if completed_steps:
+                    step_times = []
+                    for s in completed_steps:
+                        if s.completed_at and s.started_at:
+                            duration = s.completed_at - s.started_at
+                            step_times.append(duration.total_seconds() / 3600)
+                    avg_step_time = sum(step_times) / len(step_times) if step_times else 0
+                
+                step_performance[step.name] = {
+                    "completion_rate": len(completed_steps) / len(step_instances) * 100,
+                    "average_time": avg_step_time,
+                    "total_instances": len(step_instances)
+                }
+        
+        return {
+            "completion_rate": completion_rate,
+            "average_completion_time": avg_completion_time,
+            "bottleneck_steps": self._identify_bottleneck_steps(workflow_id),
+            "step_performance": step_performance
+        }
+    
+    def get_approval_rate_analytics(self) -> Dict[str, Any]:
+        """Get comprehensive approval rate analytics"""
+        all_step_instances = self.db.query(WorkflowStepInstance).all()
+        
+        if not all_step_instances:
+            return {
+                "overall_approval_rate": 0,
+                "rejection_rate": 0,
+                "delegation_rate": 0,
+                "step_approval_rates": {}
+            }
+        
+        completed_steps = [s for s in all_step_instances if s.status in [
+            StepInstanceStatus.COMPLETED, StepInstanceStatus.REJECTED
+        ]]
+        
+        if not completed_steps:
+            return {
+                "overall_approval_rate": 0,
+                "rejection_rate": 0,
+                "delegation_rate": 0,
+                "step_approval_rates": {}
+            }
+        
+        approved = len([s for s in completed_steps if s.status == StepInstanceStatus.COMPLETED])
+        rejected = len([s for s in completed_steps if s.status == StepInstanceStatus.REJECTED])
+        delegated = len([s for s in all_step_instances if s.escalated])
+        
+        overall_approval_rate = approved / len(completed_steps) * 100
+        rejection_rate = rejected / len(completed_steps) * 100
+        delegation_rate = delegated / len(all_step_instances) * 100
+        
+        # Step-specific approval rates
+        step_approval_rates = {}
+        step_groups = {}
+        for step_instance in completed_steps:
+            if step_instance.step:
+                step_name = step_instance.step.name
+                if step_name not in step_groups:
+                    step_groups[step_name] = []
+                step_groups[step_name].append(step_instance)
+        
+        for step_name, instances in step_groups.items():
+            approved_count = len([s for s in instances if s.status == StepInstanceStatus.COMPLETED])
+            step_approval_rates[step_name] = approved_count / len(instances) * 100
+        
+        return {
+            "overall_approval_rate": overall_approval_rate,
+            "rejection_rate": rejection_rate,
+            "delegation_rate": delegation_rate,
+            "step_approval_rates": step_approval_rates
+        }
+    
+    def get_bottleneck_analysis(self) -> Dict[str, Any]:
+        """Get bottleneck identification and analysis"""
+        # Get all active and recently completed workflow instances
+        recent_date = datetime.utcnow() - timedelta(days=30)
+        instances = self.db.query(WorkflowInstance).filter(
+            WorkflowInstance.initiated_at >= recent_date
+        ).all()
+        
+        slow_steps = []
+        overdue_frequency = {}
+        escalation_patterns = []
+        
+        # Analyze step performance to identify bottlenecks
+        step_times = {}
+        for instance in instances:
+            for step_instance in instance.step_instances:
+                if step_instance.step and step_instance.completed_at and step_instance.started_at:
+                    step_name = step_instance.step.name
+                    duration = step_instance.completed_at - step_instance.started_at
+                    duration_hours = duration.total_seconds() / 3600
+                    
+                    if step_name not in step_times:
+                        step_times[step_name] = []
+                    step_times[step_name].append(duration_hours)
+        
+        # Identify slow steps (above 75th percentile)
+        for step_name, times in step_times.items():
+            if len(times) > 1:
+                times.sort()
+                p75_index = int(len(times) * 0.75)
+                p75_time = times[p75_index]
+                avg_time = sum(times) / len(times)
+                
+                if avg_time > 24:  # More than 24 hours average
+                    slow_steps.append({
+                        "step_name": step_name,
+                        "average_time_hours": avg_time,
+                        "p75_time_hours": p75_time,
+                        "instance_count": len(times)
+                    })
+        
+        # Analyze overdue frequency
+        overdue_steps = self.get_overdue_approvals()
+        for step in overdue_steps:
+            if step.step:
+                step_name = step.step.name
+                overdue_frequency[step_name] = overdue_frequency.get(step_name, 0) + 1
+        
+        # Analyze escalation patterns
+        escalated_steps = self.db.query(WorkflowStepInstance).filter(
+            WorkflowStepInstance.escalated == True
+        ).all()
+        
+        escalation_counts = {}
+        for step in escalated_steps:
+            if step.step:
+                step_name = step.step.name
+                escalation_counts[step_name] = escalation_counts.get(step_name, 0) + 1
+        
+        for step_name, count in escalation_counts.items():
+            escalation_patterns.append({
+                "step_name": step_name,
+                "escalation_count": count,
+                "pattern": "high" if count > 5 else "moderate" if count > 2 else "low"
+            })
+        
+        # Generate recommendations
+        recommendations = []
+        for step in slow_steps:
+            recommendations.append(f"Consider optimizing '{step['step_name']}' - average time {step['average_time_hours']:.1f} hours")
+        
+        for step_name, freq in overdue_frequency.items():
+            if freq > 3:
+                recommendations.append(f"Review timeout settings for '{step_name}' - {freq} overdue instances")
+        
+        return {
+            "slow_steps": slow_steps,
+            "overdue_frequency": overdue_frequency,
+            "escalation_patterns": escalation_patterns,
+            "performance_recommendations": recommendations
+        }
+    
     def get_workflow_analytics(self) -> Dict[str, Any]:
         """Get workflow analytics data"""
         total_workflows = self.db.query(Workflow).count()
@@ -402,12 +603,409 @@ class WorkflowService:
         else:
             avg_completion_time = 0
         
+        # Get detailed approval rates
+        approval_rates = self.get_approval_rate_analytics()
+        
+        # Get bottleneck analysis
+        bottleneck_analysis = self.get_bottleneck_analysis()
+        
+        # Get user performance summary
+        user_performance = self.get_user_performance_metrics()
+        
         return {
             "total_workflows": total_workflows,
             "active_workflows": active_workflows,
             "completed_instances": completed_instances,
             "average_completion_time": avg_completion_time,
-            "approval_rates": {},  # TODO: Implement detailed approval rates
-            "bottleneck_steps": [],  # TODO: Implement bottleneck analysis
-            "user_performance": []  # TODO: Implement user performance metrics
+            "approval_rates": approval_rates,
+            "bottleneck_steps": bottleneck_analysis.get("slow_steps", []),
+            "user_performance": user_performance
+        }
+    
+    def get_user_performance_metrics(self) -> Dict[str, Any]:
+        """Get user performance metrics"""
+        # Get recent step instances (last 30 days)
+        recent_date = datetime.utcnow() - timedelta(days=30)
+        recent_steps = self.db.query(WorkflowStepInstance).filter(
+            WorkflowStepInstance.started_at >= recent_date
+        ).all()
+        
+        user_metrics = {}
+        approval_speed = {}
+        approval_quality = {}
+        workload_distribution = {}
+        delegation_patterns = {}
+        
+        # Group by user
+        user_steps = {}
+        for step in recent_steps:
+            if step.assigned_to:
+                if step.assigned_to not in user_steps:
+                    user_steps[step.assigned_to] = []
+                user_steps[step.assigned_to].append(step)
+        
+        for user_id, steps in user_steps.items():
+            completed_steps = [s for s in steps if s.status == StepInstanceStatus.COMPLETED]
+            
+            # Calculate approval speed
+            if completed_steps:
+                completion_times = []
+                for step in completed_steps:
+                    if step.completed_at and step.started_at:
+                        duration = step.completed_at - step.started_at
+                        completion_times.append(duration.total_seconds() / 3600)
+                
+                avg_speed = sum(completion_times) / len(completion_times) if completion_times else 0
+                approval_speed[user_id] = avg_speed
+            
+            # Calculate approval quality (approval rate)
+            total_decisions = len([s for s in steps if s.status in [
+                StepInstanceStatus.COMPLETED, StepInstanceStatus.REJECTED
+            ]])
+            approvals = len([s for s in steps if s.status == StepInstanceStatus.COMPLETED])
+            
+            if total_decisions > 0:
+                approval_quality[user_id] = approvals / total_decisions * 100
+            
+            # Workload distribution
+            workload_distribution[user_id] = len(steps)
+            
+            # Delegation patterns
+            delegated = len([s for s in steps if s.escalated])
+            delegation_patterns[user_id] = {
+                "delegated_count": delegated,
+                "delegation_rate": delegated / len(steps) * 100 if steps else 0
+            }
+        
+        return {
+            "approval_speed": approval_speed,
+            "approval_quality": approval_quality,
+            "workload_distribution": workload_distribution,
+            "delegation_patterns": delegation_patterns
+        }
+    
+    def get_workflow_health_metrics(self) -> Dict[str, Any]:
+        """Get workflow system health metrics"""
+        now = datetime.utcnow()
+        
+        active_instances = self.db.query(WorkflowInstance).filter(
+            WorkflowInstance.status == WorkflowInstanceStatus.IN_PROGRESS
+        ).count()
+        
+        overdue_instances = len(self.get_overdue_approvals())
+        
+        # Calculate error rate (rejected workflows)
+        total_recent = self.db.query(WorkflowInstance).filter(
+            WorkflowInstance.initiated_at >= now - timedelta(days=7)
+        ).count()
+        
+        rejected_recent = self.db.query(WorkflowInstance).filter(
+            and_(
+                WorkflowInstance.initiated_at >= now - timedelta(days=7),
+                WorkflowInstance.status == WorkflowInstanceStatus.REJECTED
+            )
+        ).count()
+        
+        error_rate = rejected_recent / total_recent * 100 if total_recent > 0 else 0
+        
+        # System load (pending approvals per active user)
+        pending_approvals = self.db.query(WorkflowStepInstance).filter(
+            WorkflowStepInstance.status == StepInstanceStatus.IN_PROGRESS
+        ).count()
+        
+        # Get unique assigned users
+        assigned_users = set()
+        active_steps = self.db.query(WorkflowStepInstance).filter(
+            WorkflowStepInstance.status == StepInstanceStatus.IN_PROGRESS
+        ).all()
+        
+        for step in active_steps:
+            if step.assigned_to:
+                assigned_users.add(step.assigned_to)
+        
+        system_load = pending_approvals / len(assigned_users) if assigned_users else 0
+        
+        return {
+            "active_instances": active_instances,
+            "overdue_instances": overdue_instances,
+            "error_rate": error_rate,
+            "system_load": system_load,
+            "pending_approvals": pending_approvals,
+            "active_users": len(assigned_users)
+        }
+    
+    def get_time_based_analytics(self, days: int = 30) -> Dict[str, Any]:
+        """Get time-based workflow analytics"""
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get instances in time range
+        instances = self.db.query(WorkflowInstance).filter(
+            WorkflowInstance.initiated_at >= start_date
+        ).all()
+        
+        # Daily completion trends
+        daily_completions = {}
+        daily_initiations = {}
+        
+        for instance in instances:
+            init_date = instance.initiated_at.date()
+            daily_initiations[str(init_date)] = daily_initiations.get(str(init_date), 0) + 1
+            
+            if instance.completed_at and instance.status == WorkflowInstanceStatus.COMPLETED:
+                comp_date = instance.completed_at.date()
+                daily_completions[str(comp_date)] = daily_completions.get(str(comp_date), 0) + 1
+        
+        # Peak usage hours analysis
+        hourly_activity = {}
+        for instance in instances:
+            hour = instance.initiated_at.hour
+            hourly_activity[hour] = hourly_activity.get(hour, 0) + 1
+        
+        peak_hours = sorted(hourly_activity.items(), key=lambda x: x[1], reverse=True)[:3]
+        
+        # Performance trends (completion times over time)
+        weekly_performance = {}
+        for instance in instances:
+            if instance.completed_at and instance.status == WorkflowInstanceStatus.COMPLETED:
+                week = instance.initiated_at.isocalendar()[1]
+                duration = instance.completed_at - instance.initiated_at
+                duration_hours = duration.total_seconds() / 3600
+                
+                if week not in weekly_performance:
+                    weekly_performance[week] = []
+                weekly_performance[week].append(duration_hours)
+        
+        # Calculate average for each week
+        weekly_avg_performance = {}
+        for week, times in weekly_performance.items():
+            weekly_avg_performance[week] = sum(times) / len(times)
+        
+        return {
+            "daily_completion_trends": daily_completions,
+            "daily_initiation_trends": daily_initiations,
+            "peak_usage_hours": [h[0] for h in peak_hours],
+            "hourly_activity": hourly_activity,
+            "weekly_performance_trends": weekly_avg_performance,
+            "seasonal_patterns": self._analyze_seasonal_patterns(instances),
+            "performance_trends": self._calculate_performance_trends(instances)
+        }
+    
+    def get_document_type_analytics(self) -> Dict[str, Any]:
+        """Get document type specific analytics"""
+        # Group workflows by document type
+        workflows_by_type = {}
+        all_workflows = self.db.query(Workflow).all()
+        
+        for workflow in all_workflows:
+            doc_type = workflow.document_type
+            if doc_type not in workflows_by_type:
+                workflows_by_type[doc_type] = []
+            workflows_by_type[doc_type].append(workflow)
+        
+        type_analytics = {}
+        
+        for doc_type, workflows in workflows_by_type.items():
+            # Get all instances for this document type
+            workflow_ids = [w.id for w in workflows]
+            instances = self.db.query(WorkflowInstance).filter(
+                WorkflowInstance.workflow_id.in_(workflow_ids)
+            ).all()
+            
+            if not instances:
+                continue
+            
+            completed = [i for i in instances if i.status == WorkflowInstanceStatus.COMPLETED]
+            completion_rate = len(completed) / len(instances) * 100
+            
+            # Average processing time
+            processing_times = []
+            for instance in completed:
+                if instance.completed_at:
+                    duration = instance.completed_at - instance.initiated_at
+                    processing_times.append(duration.total_seconds() / 3600)
+            
+            avg_processing_time = sum(processing_times) / len(processing_times) if processing_times else 0
+            
+            # Approval patterns
+            total_steps = sum(len(i.step_instances) for i in instances)
+            approved_steps = sum(
+                len([s for s in i.step_instances if s.status == StepInstanceStatus.COMPLETED]) 
+                for i in instances
+            )
+            
+            approval_rate = approved_steps / total_steps * 100 if total_steps > 0 else 0
+            
+            type_analytics[doc_type] = {
+                "completion_rate": completion_rate,
+                "average_processing_time": avg_processing_time,
+                "approval_rate": approval_rate,
+                "total_instances": len(instances),
+                "efficiency_score": (completion_rate + approval_rate) / 2
+            }
+        
+        # Identify most efficient types
+        sorted_types = sorted(
+            type_analytics.items(), 
+            key=lambda x: x[1]['efficiency_score'], 
+            reverse=True
+        )
+        
+        return {
+            "completion_rates_by_type": {k: v['completion_rate'] for k, v in type_analytics.items()},
+            "processing_time_by_type": {k: v['average_processing_time'] for k, v in type_analytics.items()},
+            "approval_patterns_by_type": {k: v['approval_rate'] for k, v in type_analytics.items()},
+            "most_efficient_types": [t[0] for t in sorted_types[:3]],
+            "detailed_analytics": type_analytics
+        }
+    
+    def generate_workflow_report(
+        self, 
+        start_date: datetime, 
+        end_date: datetime, 
+        include_recommendations: bool = True
+    ) -> Dict[str, Any]:
+        """Generate comprehensive workflow report"""
+        # Get instances in date range
+        instances = self.db.query(WorkflowInstance).filter(
+            and_(
+                WorkflowInstance.initiated_at >= start_date,
+                WorkflowInstance.initiated_at <= end_date
+            )
+        ).all()
+        
+        # Executive summary
+        total_instances = len(instances)
+        completed_instances = len([i for i in instances if i.status == WorkflowInstanceStatus.COMPLETED])
+        completion_rate = completed_instances / total_instances * 100 if total_instances > 0 else 0
+        
+        # Performance metrics
+        performance_metrics = self.get_workflow_analytics()
+        
+        # Bottleneck analysis
+        bottleneck_analysis = self.get_bottleneck_analysis()
+        
+        # User insights
+        user_insights = self.get_user_performance_metrics()
+        
+        # Trend analysis
+        days_in_period = (end_date - start_date).days
+        trend_analysis = self.get_time_based_analytics(days_in_period)
+        
+        # Generate recommendations
+        recommendations = []
+        if include_recommendations:
+            recommendations.extend(bottleneck_analysis.get('performance_recommendations', []))
+            
+            # Add more recommendations based on analysis
+            if completion_rate < 80:
+                recommendations.append("Consider reviewing workflow designs - completion rate is below 80%")
+            
+            if performance_metrics.get('average_completion_time', 0) > 72:
+                recommendations.append("Review timeout settings - average completion time exceeds 72 hours")
+            
+            overdue_count = len(self.get_overdue_approvals())
+            if overdue_count > 10:
+                recommendations.append(f"Address {overdue_count} overdue approvals to improve system efficiency")
+        
+        return {
+            "executive_summary": {
+                "reporting_period": f"{start_date.date()} to {end_date.date()}",
+                "total_instances": total_instances,
+                "completed_instances": completed_instances,
+                "completion_rate": completion_rate,
+                "average_completion_time": performance_metrics.get('average_completion_time', 0)
+            },
+            "performance_metrics": performance_metrics,
+            "bottleneck_analysis": bottleneck_analysis,
+            "user_insights": user_insights,
+            "trend_analysis": trend_analysis,
+            "recommendations": recommendations,
+            "generated_at": datetime.utcnow().isoformat()
+        }
+    
+    # Helper methods
+    def _identify_bottleneck_steps(self, workflow_id: str) -> List[str]:
+        """Identify bottleneck steps in a specific workflow"""
+        instances = self.db.query(WorkflowInstance).filter(
+            WorkflowInstance.workflow_id == workflow_id
+        ).all()
+        
+        step_times = {}
+        for instance in instances:
+            for step_instance in instance.step_instances:
+                if step_instance.step and step_instance.completed_at and step_instance.started_at:
+                    step_name = step_instance.step.name
+                    duration = step_instance.completed_at - step_instance.started_at
+                    duration_hours = duration.total_seconds() / 3600
+                    
+                    if step_name not in step_times:
+                        step_times[step_name] = []
+                    step_times[step_name].append(duration_hours)
+        
+        # Return steps with average time > 24 hours
+        bottlenecks = []
+        for step_name, times in step_times.items():
+            avg_time = sum(times) / len(times)
+            if avg_time > 24:  # More than 24 hours
+                bottlenecks.append(step_name)
+        
+        return bottlenecks
+    
+    def _analyze_seasonal_patterns(self, instances: List[WorkflowInstance]) -> Dict[str, Any]:
+        """Analyze seasonal patterns in workflow data"""
+        monthly_activity = {}
+        
+        for instance in instances:
+            month = instance.initiated_at.month
+            monthly_activity[month] = monthly_activity.get(month, 0) + 1
+        
+        # Identify peak and low months
+        if monthly_activity:
+            peak_month = max(monthly_activity.items(), key=lambda x: x[1])
+            low_month = min(monthly_activity.items(), key=lambda x: x[1])
+            
+            return {
+                "monthly_distribution": monthly_activity,
+                "peak_month": peak_month[0],
+                "peak_activity": peak_month[1],
+                "low_month": low_month[0],
+                "low_activity": low_month[1]
+            }
+        
+        return {"monthly_distribution": {}, "peak_month": None, "low_month": None}
+    
+    def _calculate_performance_trends(self, instances: List[WorkflowInstance]) -> Dict[str, Any]:
+        """Calculate performance trends over time"""
+        completed = [i for i in instances if i.status == WorkflowInstanceStatus.COMPLETED and i.completed_at]
+        
+        if len(completed) < 2:
+            return {"trend": "insufficient_data", "improvement": 0}
+        
+        # Sort by completion date
+        completed.sort(key=lambda x: x.completed_at)
+        
+        # Calculate completion times for first and last halves
+        mid_point = len(completed) // 2
+        first_half = completed[:mid_point]
+        second_half = completed[mid_point:]
+        
+        def avg_completion_time(instances_list):
+            times = []
+            for instance in instances_list:
+                duration = instance.completed_at - instance.initiated_at
+                times.append(duration.total_seconds() / 3600)
+            return sum(times) / len(times) if times else 0
+        
+        first_half_avg = avg_completion_time(first_half)
+        second_half_avg = avg_completion_time(second_half)
+        
+        improvement = first_half_avg - second_half_avg
+        trend = "improving" if improvement > 0 else "declining" if improvement < 0 else "stable"
+        
+        return {
+            "trend": trend,
+            "improvement_hours": improvement,
+            "first_half_avg": first_half_avg,
+            "second_half_avg": second_half_avg
         }
