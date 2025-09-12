@@ -2,7 +2,7 @@
 API v1 router configuration
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import documents, auth, workflows, websockets
+from app.api.v1.endpoints import documents, auth, workflows, websockets, collaboration
 
 api_router = APIRouter()
 
@@ -17,3 +17,6 @@ api_router.include_router(workflows.router, prefix="/workflows", tags=["Workflow
 
 # Include WebSocket routes
 api_router.include_router(websockets.router, tags=["WebSockets"])
+
+# Include collaboration routes
+api_router.include_router(collaboration.router, prefix="/collaboration", tags=["Collaboration"])
