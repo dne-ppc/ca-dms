@@ -30,7 +30,7 @@ def init_db():
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     
     # Import models to ensure they are registered
-    from app.models import document  # noqa
+    from app.models import document, user  # noqa
     
     # Create all tables
     Base.metadata.create_all(bind=engine)

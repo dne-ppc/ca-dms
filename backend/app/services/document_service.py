@@ -15,7 +15,7 @@ class DocumentService:
     def __init__(self, db: Session):
         self.db = db
     
-    def create_document(self, document_data: DocumentCreate) -> Document:
+    def create_document(self, document_data: DocumentCreate, created_by: Optional[str] = None) -> Document:
         """Create a new document"""
         # Generate UUID if not provided
         document_id = str(uuid.uuid4())
@@ -27,6 +27,7 @@ class DocumentService:
             content=document_data.content,
             document_type=document_data.document_type,
             placeholders=document_data.placeholders,
+            created_by=created_by,
             version=1  # New documents start at version 1
         )
         

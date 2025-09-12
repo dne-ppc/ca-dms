@@ -11,6 +11,14 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib import colors
 
 from app.core.database import get_db
+from app.core.dependencies import (
+    get_current_user, 
+    get_current_verified_user, 
+    get_optional_current_user,
+    require_create,
+    require_update,
+    require_delete
+)
 from app.services.document_service import DocumentService
 from app.schemas.document import (
     DocumentCreate, 
@@ -20,6 +28,7 @@ from app.schemas.document import (
     DocumentSearchQuery,
     DocumentSearchResponse
 )
+from app.models.user import User
 
 router = APIRouter()
 
@@ -153,11 +162,19 @@ def get_documents(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=100),
     document_type: Optional[str] = Query(default=None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Get all documents with optional filtering"""
     service = DocumentService(db)
     documents = service.get_documents(skip=skip, limit=limit, document_type=document_type)
+    
+    # Filter documents based on user permissions if authenticated
+    if current_user:
+        # Admin and board members can see all documents
+        if not current_user.has_permission("read"):
+            # Filter to only show user's own documents
+            documents = [doc for doc in documents if doc.created_by == current_user.id]
     
     # Convert SQLAlchemy models to Pydantic models
     document_responses = [DocumentResponse.model_validate(doc) for doc in documents]
@@ -183,15 +200,20 @@ def get_document(document_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=DocumentResponse)
-def create_document(document: DocumentCreate, db: Session = Depends(get_db)):
-    """Create a new document"""
+def create_document(
+    document: DocumentCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_create)
+):
+    """Create a new document (requires authentication and create permission)"""
     service = DocumentService(db)
     
     # Extract placeholders from content if not provided
     if not document.placeholders:
         document.placeholders = service.extract_placeholders_from_content(document.content)
     
-    new_document = service.create_document(document)
+    # Set the creator
+    new_document = service.create_document(document, created_by=current_user.id)
     return DocumentResponse.model_validate(new_document)
 
 
