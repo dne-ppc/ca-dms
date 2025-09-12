@@ -209,7 +209,7 @@ class WorkflowDashboard(BaseModel):
 
 class ApprovalAction(BaseModel):
     """Schema for approval actions"""
-    action: str = Field(..., regex="^(approve|reject|delegate)$")
+    action: str = Field(..., pattern="^(approve|reject|delegate)$")
     comments: Optional[str] = None
     form_data: Optional[Dict[str, Any]] = None
     attachments: Optional[List[str]] = None
