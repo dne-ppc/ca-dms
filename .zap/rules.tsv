@@ -1,0 +1,21 @@
+# ZAP Baseline Rules for CA-DMS Security Scanning
+# Format: LEVEL	URL_REGEX	PARAMETER	CWE	WASCID	INFO
+
+# Ignore rules for expected behavior
+IGNORE	http://localhost:8000/health		0	0	Health check endpoint
+IGNORE	http://localhost:8000/docs		0	0	API documentation
+IGNORE	http://localhost:8000/openapi.json		0	0	OpenAPI specification
+
+# Medium priority issues to monitor
+MEDIUM	.*\.js$		0	0	JavaScript files
+MEDIUM	.*\.css$		0	0	CSS files
+
+# High priority security issues (don't ignore these)
+HIGH	.*password.*		0	0	Password related endpoints
+HIGH	.*auth.*		0	0	Authentication endpoints
+HIGH	.*login.*		0	0	Login endpoints
+
+# Custom rules for CA-DMS specific endpoints
+INFO	/api/v1/documents		0	0	Document management endpoints
+INFO	/api/v1/workflows		0	0	Workflow endpoints
+INFO	/api/v1/users		0	0	User management endpoints

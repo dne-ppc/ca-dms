@@ -418,7 +418,7 @@ class WorkflowService:
                     step_instances.append(step_inst)
             
             if step_instances:
-                completed_steps = [s for s in step_instances if s.status == StepInstanceStatus.COMPLETED]
+                completed_steps = [s for s in step_instances if s.status == StepInstanceStatus.APPROVED]
                 avg_step_time = 0
                 if completed_steps:
                     step_times = []
@@ -454,7 +454,7 @@ class WorkflowService:
             }
         
         completed_steps = [s for s in all_step_instances if s.status in [
-            StepInstanceStatus.COMPLETED, StepInstanceStatus.REJECTED
+            StepInstanceStatus.APPROVED, StepInstanceStatus.REJECTED
         ]]
         
         if not completed_steps:
@@ -465,7 +465,7 @@ class WorkflowService:
                 "step_approval_rates": {}
             }
         
-        approved = len([s for s in completed_steps if s.status == StepInstanceStatus.COMPLETED])
+        approved = len([s for s in completed_steps if s.status == StepInstanceStatus.APPROVED])
         rejected = len([s for s in completed_steps if s.status == StepInstanceStatus.REJECTED])
         delegated = len([s for s in all_step_instances if s.escalated])
         
@@ -484,7 +484,7 @@ class WorkflowService:
                 step_groups[step_name].append(step_instance)
         
         for step_name, instances in step_groups.items():
-            approved_count = len([s for s in instances if s.status == StepInstanceStatus.COMPLETED])
+            approved_count = len([s for s in instances if s.status == StepInstanceStatus.APPROVED])
             step_approval_rates[step_name] = approved_count / len(instances) * 100
         
         return {
@@ -645,7 +645,7 @@ class WorkflowService:
                 user_steps[step.assigned_to].append(step)
         
         for user_id, steps in user_steps.items():
-            completed_steps = [s for s in steps if s.status == StepInstanceStatus.COMPLETED]
+            completed_steps = [s for s in steps if s.status == StepInstanceStatus.APPROVED]
             
             # Calculate approval speed
             if completed_steps:
@@ -660,9 +660,9 @@ class WorkflowService:
             
             # Calculate approval quality (approval rate)
             total_decisions = len([s for s in steps if s.status in [
-                StepInstanceStatus.COMPLETED, StepInstanceStatus.REJECTED
+                StepInstanceStatus.APPROVED, StepInstanceStatus.REJECTED
             ]])
-            approvals = len([s for s in steps if s.status == StepInstanceStatus.COMPLETED])
+            approvals = len([s for s in steps if s.status == StepInstanceStatus.APPROVED])
             
             if total_decisions > 0:
                 approval_quality[user_id] = approvals / total_decisions * 100
@@ -830,7 +830,7 @@ class WorkflowService:
             # Approval patterns
             total_steps = sum(len(i.step_instances) for i in instances)
             approved_steps = sum(
-                len([s for s in i.step_instances if s.status == StepInstanceStatus.COMPLETED]) 
+                len([s for s in i.step_instances if s.status == StepInstanceStatus.APPROVED]) 
                 for i in instances
             )
             

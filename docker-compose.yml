@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ca-dms-postgres
+    environment:
+      POSTGRES_DB: ca_dms
+      POSTGRES_USER: ca_dms_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ca_dms_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d/
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ca_dms_user -d ca_dms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: ca-dms-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ca_dms_redis_password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ca-dms-backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql://ca_dms_user:${POSTGRES_PASSWORD:-ca_dms_password}@postgres:5432/ca_dms
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-ca_dms_redis_password}@redis:6379/0
+      
+      # API Configuration
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      API_V1_STR: /api/v1
+      PROJECT_NAME: CA-DMS
+      
+      # CORS
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000", "http://localhost:8080", "https://your-domain.com"]'
+      
+      # Supabase (if using)
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      
+      # Email (if needed)
+      SMTP_TLS: ${SMTP_TLS:-true}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app:ro
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ca-dms-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_WS_BASE_URL=ws://localhost:8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Nginx Load Balancer (optional for production)
+  nginx:
+    image: nginx:alpine
+    container_name: ca-dms-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  default:
+    name: ca-dms-network

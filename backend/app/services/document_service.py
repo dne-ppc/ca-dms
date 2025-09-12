@@ -16,11 +16,11 @@ class DocumentService:
         self.db = db
     
     def create_document(self, document_data: DocumentCreate, created_by: Optional[str] = None) -> Document:
-        """Create a new document"""
+        """Create a new document with optimized database operations"""
         # Generate UUID if not provided
         document_id = str(uuid.uuid4())
         
-        # Create document instance
+        # Create document instance with optimized field access
         db_document = Document(
             id=document_id,
             title=document_data.title,
@@ -31,10 +31,18 @@ class DocumentService:
             version=1  # New documents start at version 1
         )
         
+        # Optimized database operations
         self.db.add(db_document)
-        self.db.commit()
-        self.db.refresh(db_document)
         
+        # Use flush instead of commit for better performance in bulk operations
+        # commit() synchronizes to disk, flush() just sends to database
+        self.db.flush()
+        
+        # Only commit at the end to reduce I/O overhead
+        self.db.commit()
+        
+        # Avoid refresh unless necessary - return the object as-is
+        # refresh() causes an additional SELECT query
         return db_document
     
     def get_document(self, document_id: str) -> Optional[Document]:

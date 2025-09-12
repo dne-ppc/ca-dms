@@ -1,38 +1,321 @@
-import { useState } from 'react'
-import { QuillEditor } from '../components/editor/QuillEditor'
-import { useEditorStore } from '../stores/editorStore'
-import './DocumentEditor.css'
+import { useState, useEffect } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+
+interface Document {
+  id: string
+  title: string
+  content: {
+    ops: Array<{ insert: string }>
+  }
+  document_type: string
+  version: number
+}
 
 const DocumentEditor = () => {
-  const { content, setContent } = useEditorStore()
-  const [isLoading] = useState(false)
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [content, setContent] = useState('')
+  const [title, setTitle] = useState('Untitled Document')
+  const [documentType, setDocumentType] = useState('governance')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
 
-  const handleContentChange = (newContent: string) => {
-    setContent(newContent)
+  useEffect(() => {
+    if (id) {
+      loadDocument(id)
+    }
+  }, [id])
+
+  // Auto-save effect
+  useEffect(() => {
+    if (hasUnsavedChanges && autoSaveEnabled && id && title.trim()) {
+      const autoSaveTimer = setTimeout(() => {
+        autoSave()
+      }, 3000) // Auto-save after 3 seconds of inactivity
+
+      return () => clearTimeout(autoSaveTimer)
+    }
+  }, [hasUnsavedChanges, title, content, documentType, autoSaveEnabled, id])
+
+  // Track changes to mark document as having unsaved changes
+  useEffect(() => {
+    if (!isLoading && (title !== 'Untitled Document' || content !== '')) {
+      setHasUnsavedChanges(true)
+    }
+  }, [title, content, documentType, isLoading])
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const loadDocument = async (docId: string) => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/documents/${docId}`)
+      if (response.ok) {
+        const doc: Document = await response.json()
+        setTitle(doc.title)
+        setDocumentType(doc.document_type)
+        // Convert Quill delta ops to plain text
+        const text = doc.content.ops?.map(op => op.insert).join('') || ''
+        setContent(text)
+        setHasUnsavedChanges(false)
+        setLastSaved(new Date())
+      } else {
+        setSaveMessage('Error loading document')
+      }
+    } catch (error) {
+      setSaveMessage('Error loading document: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleInsertPlaceholder = (type: string) => {
-    console.log(`Inserting placeholder of type: ${type}`)
-    // TODO: Implement placeholder insertion logic
+  const autoSave = async () => {
+    if (!id || !title.trim()) return
+    
+    try {
+      setIsSaving(true)
+      
+      const deltaContent = {
+        ops: [{ insert: content + '\n' }]
+      }
+
+      const documentData = {
+        title: title.trim(),
+        content: deltaContent,
+        document_type: documentType,
+        placeholders: {
+          signatures: [],
+          longResponses: [],
+          lineSegments: [],
+          versionTables: []
+        }
+      }
+
+      const response = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(documentData)
+      })
+
+      if (response.ok) {
+        setHasUnsavedChanges(false)
+        setLastSaved(new Date())
+        setSaveMessage('Auto-saved')
+        setTimeout(() => setSaveMessage(''), 2000)
+      }
+    } catch (error) {
+      // Silent fail for auto-save to avoid interrupting user
+      console.error('Auto-save failed:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const saveDocument = async () => {
+    if (!title.trim()) {
+      setSaveMessage('Please enter a document title')
+      return
+    }
+
+    setIsSaving(true)
+    setSaveMessage('')
+
+    try {
+      // Convert plain text to Quill delta format
+      const deltaContent = {
+        ops: [{ insert: content + '\n' }]
+      }
+
+      const documentData = {
+        title: title.trim(),
+        content: deltaContent,
+        document_type: documentType,
+        placeholders: {
+          signatures: [],
+          longResponses: [],
+          lineSegments: [],
+          versionTables: []
+        }
+      }
+
+      const url = id 
+        ? `http://localhost:8000/api/v1/documents/${id}` 
+        : 'http://localhost:8000/api/v1/documents/'
+      
+      const method = id ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(documentData)
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setSaveMessage('Document saved successfully!')
+        setHasUnsavedChanges(false)
+        setLastSaved(new Date())
+        
+        // If creating new document, redirect to edit mode
+        if (!id && result.id) {
+          setTimeout(() => {
+            navigate(`/editor/${result.id}`)
+          }, 1000)
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: 'Save failed' }))
+        setSaveMessage('Error saving: ' + (errorData.detail || 'Unknown error'))
+      }
+    } catch (error) {
+      setSaveMessage('Error saving: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setIsSaving(false)
+      // Clear message after 3 seconds
+      setTimeout(() => setSaveMessage(''), 3000)
+    }
+  }
+
+  const previewPDF = () => {
+    if (id) {
+      window.open(`http://localhost:8000/api/v1/documents/${id}/pdf`, '_blank')
+    } else {
+      setSaveMessage('Please save the document first to preview PDF')
+      setTimeout(() => setSaveMessage(''), 3000)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="document-editor">
+        <div className="loading">Loading document...</div>
+      </div>
+    )
   }
 
   return (
     <div className="document-editor">
       <header className="editor-header">
-        <h1>Document Editor</h1>
+        <div className="editor-nav">
+          <Link to="/dashboard" className="back-link">← Back to Dashboard</Link>
+        </div>
+        <h1>{id ? `Edit Document` : 'New Document'}</h1>
         <div className="editor-actions">
-          <span className="save-status">
-            {isLoading ? 'Saving...' : 'All changes saved'}
-          </span>
+          <div className="save-info">
+            <span className={`save-status ${saveMessage.includes('Error') ? 'error' : (saveMessage.includes('success') || saveMessage === 'Auto-saved') ? 'success' : hasUnsavedChanges ? 'warning' : ''}`}>
+              {isSaving ? 'Saving...' : saveMessage || (hasUnsavedChanges ? 'Unsaved changes' : (lastSaved ? `Last saved: ${lastSaved.toLocaleTimeString()}` : (id ? 'Ready to edit' : 'Ready to create')))}
+            </span>
+            {id && (
+              <div className="auto-save-toggle">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={autoSaveEnabled}
+                    onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                  />
+                  <span className="toggle-label">Auto-save</span>
+                </label>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       
       <main className="editor-content">
-        <QuillEditor
-          initialContent={content}
-          onChange={handleContentChange}
-          onInsertPlaceholder={handleInsertPlaceholder}
-        />
+        <div className="document-form">
+          <div className="form-group">
+            <label htmlFor="title">Document Title</label>
+            <input 
+              id="title"
+              type="text" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              className="title-input"
+              placeholder="Enter document title..."
+              disabled={isSaving}
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="document-type">Document Type</label>
+            <select
+              id="document-type"
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+              className="type-select"
+              disabled={isSaving}
+            >
+              <option value="governance">Governance</option>
+              <option value="policy">Policy</option>
+              <option value="meeting">Meeting Minutes</option>
+              <option value="notice">Notice</option>
+              <option value="form">Form</option>
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="content">Content</label>
+            <textarea 
+              id="content"
+              value={content} 
+              onChange={(e) => setContent(e.target.value)}
+              className="content-textarea"
+              rows={20}
+              placeholder="Start typing your document content..."
+              disabled={isSaving}
+            />
+          </div>
+          
+          <div className="editor-toolbar">
+            <button 
+              className="save-button" 
+              onClick={saveDocument}
+              disabled={isSaving || !title.trim()}
+            >
+              {isSaving ? 'Saving...' : (id ? 'Update Document' : 'Save Document')}
+            </button>
+            <button 
+              className="preview-button"
+              onClick={previewPDF}
+              disabled={!id}
+            >
+              Preview PDF
+            </button>
+            {id && (
+              <button 
+                className="delete-button"
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this document?')) {
+                    // TODO: Implement delete functionality
+                    alert('Delete functionality not yet implemented')
+                  }
+                }}
+                disabled={isSaving}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )

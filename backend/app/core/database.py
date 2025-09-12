@@ -21,11 +21,33 @@ def init_db():
     # For now, use SQLite for development if no DATABASE_URL is provided
     database_url = settings.DATABASE_URL or "sqlite:///./ca_dms.db"
     
-    engine = create_engine(
-        database_url,
-        # SQLite specific settings
-        connect_args={"check_same_thread": False} if "sqlite" in database_url else {}
-    )
+    # Optimized engine configuration for performance
+    if "sqlite" in database_url:
+        engine = create_engine(
+            database_url,
+            # SQLite optimizations for concurrent access
+            connect_args={
+                "check_same_thread": False,
+                "timeout": 10,  # 10 second timeout for database locks
+                "isolation_level": None  # Use autocommit mode for better concurrency
+            },
+            # Connection pooling optimized for SQLite
+            pool_size=5,   # Smaller pool size for SQLite to reduce contention
+            max_overflow=10,  # Limited overflow for SQLite
+            pool_pre_ping=True,  # Verify connections are alive
+            pool_recycle=3600,  # Recycle connections every hour
+            echo=False  # Disable SQL logging for performance
+        )
+    else:
+        engine = create_engine(
+            database_url,
+            # PostgreSQL/other database optimizations
+            pool_size=20,
+            max_overflow=50,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            echo=False
+        )
     
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     

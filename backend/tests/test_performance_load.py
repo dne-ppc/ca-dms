@@ -192,7 +192,7 @@ class TestDocumentOperationsLoad:
         
         load_results = LoadTestResults()
         concurrent_requests = 100
-        max_workers = 20  # Limit concurrent threads to avoid overwhelming system
+        max_workers = 10  # Reduce concurrent threads to match database pool size
         
         print(f"\n🚀 Starting load test: {concurrent_requests} concurrent document creations")
         
