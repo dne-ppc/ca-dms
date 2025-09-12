@@ -7,11 +7,15 @@ from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException, status
 from app.core.websocket_manager import websocket_manager
 from app.core.websocket_auth import get_user_from_websocket_token
+from app.services.presence_service import PresenceService
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Global presence service instance
+presence_service = PresenceService(websocket_manager)
 
 
 @router.websocket("/ws")
@@ -134,21 +138,36 @@ async def handle_websocket_message(user_id: str, message: dict):
             )
     
     elif message_type == "cursor_position":
-        # Handle cursor position updates (will be expanded in Task 4.1.3)
+        # Handle cursor position updates with presence awareness
         document_id = message.get("document_id")
         position = message.get("position")
+        selection_range = message.get("selection_range")
         
-        if document_id and position:
-            await websocket_manager.send_to_document_room(
+        if document_id is not None and position is not None:
+            # Update cursor position in presence service
+            success = presence_service.update_cursor_position(
+                user_id,
                 document_id,
-                {
-                    "type": "cursor_update",
-                    "document_id": document_id,
-                    "user_id": user_id,
-                    "position": position
-                },
-                exclude_user=user_id
+                position,
+                selection_range
             )
+            
+            if success:
+                # Get updated presence data
+                user_presence = presence_service.get_user_presence(user_id, document_id)
+                
+                # Broadcast presence update to other users
+                if user_presence:
+                    await websocket_manager.send_to_document_room(
+                        document_id,
+                        {
+                            "type": "presence_update",
+                            "document_id": document_id,
+                            "user_id": user_id,
+                            "presence": user_presence
+                        },
+                        exclude_user=user_id
+                    )
     
     else:
         logger.warning(f"Unknown message type: {message_type} from user {user_id}")
