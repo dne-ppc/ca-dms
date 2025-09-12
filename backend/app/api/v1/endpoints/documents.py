@@ -1,9 +1,8 @@
-from typing import List
-from fastapi import APIRouter, HTTPException, Depends
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import Response
-from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from datetime import datetime
-import uuid
 import io
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -11,32 +10,18 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
 
+from app.core.database import get_db
+from app.services.document_service import DocumentService
+from app.schemas.document import (
+    DocumentCreate, 
+    DocumentUpdate, 
+    DocumentResponse, 
+    DocumentList,
+    DocumentSearchQuery,
+    DocumentSearchResponse
+)
+
 router = APIRouter()
-
-
-# Pydantic models for API
-class DocumentBase(BaseModel):
-    title: str
-    content: dict  # Quill Delta format
-    document_type: str = "governance"
-
-
-class DocumentCreate(DocumentBase):
-    pass
-
-
-class Document(DocumentBase):
-    id: str
-    created_at: datetime
-    updated_at: datetime
-    version: int = 1
-
-    class Config:
-        from_attributes = True
-
-
-# Temporary in-memory storage for development
-documents_db = {}
 
 
 def convert_quill_delta_to_pdf_content(delta_content: dict) -> List[str]:
@@ -84,7 +69,7 @@ def convert_quill_delta_to_pdf_content(delta_content: dict) -> List[str]:
     return paragraphs if paragraphs else [""]
 
 
-def generate_pdf_from_document(document: Document) -> bytes:
+def generate_pdf_from_document(document: DocumentResponse) -> bytes:
     """Generate a PDF from a document"""
     buffer = io.BytesIO()
     
@@ -163,81 +148,93 @@ def generate_pdf_from_document(document: Document) -> bytes:
     return pdf_bytes
 
 
-@router.get("/", response_model=List[Document])
-def get_documents():
-    """Get all documents"""
-    return list(documents_db.values())
+@router.get("/", response_model=DocumentList)
+def get_documents(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
+    document_type: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db)
+):
+    """Get all documents with optional filtering"""
+    service = DocumentService(db)
+    documents = service.get_documents(skip=skip, limit=limit, document_type=document_type)
+    
+    # Convert SQLAlchemy models to Pydantic models
+    document_responses = [DocumentResponse.model_validate(doc) for doc in documents]
+    
+    return DocumentList(
+        documents=document_responses,
+        total=len(document_responses),  # TODO: Implement proper count query
+        skip=skip,
+        limit=limit
+    )
 
 
-@router.get("/{document_id}", response_model=Document)
-def get_document(document_id: str):
+@router.get("/{document_id}", response_model=DocumentResponse)
+def get_document(document_id: str, db: Session = Depends(get_db)):
     """Get a specific document by ID"""
-    if document_id not in documents_db:
+    service = DocumentService(db)
+    document = service.get_document(document_id)
+    
+    if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    return documents_db[document_id]
+    
+    return DocumentResponse.model_validate(document)
 
 
-@router.post("/", response_model=Document)
-def create_document(document: DocumentCreate):
+@router.post("/", response_model=DocumentResponse)
+def create_document(document: DocumentCreate, db: Session = Depends(get_db)):
     """Create a new document"""
-    doc_id = str(uuid.uuid4())
-    now = datetime.now()
+    service = DocumentService(db)
     
-    new_doc = Document(
-        id=doc_id,
-        title=document.title,
-        content=document.content,
-        document_type=document.document_type,
-        created_at=now,
-        updated_at=now,
-        version=1
-    )
+    # Extract placeholders from content if not provided
+    if not document.placeholders:
+        document.placeholders = service.extract_placeholders_from_content(document.content)
     
-    documents_db[doc_id] = new_doc
-    return new_doc
+    new_document = service.create_document(document)
+    return DocumentResponse.model_validate(new_document)
 
 
-@router.put("/{document_id}", response_model=Document)
-def update_document(document_id: str, document_update: DocumentCreate):
+@router.put("/{document_id}", response_model=DocumentResponse)
+def update_document(document_id: str, document_update: DocumentUpdate, db: Session = Depends(get_db)):
     """Update a document"""
-    if document_id not in documents_db:
+    service = DocumentService(db)
+    
+    # Extract placeholders from content if provided and not already set
+    if document_update.content and not document_update.placeholders:
+        document_update.placeholders = service.extract_placeholders_from_content(document_update.content)
+    
+    updated_document = service.update_document(document_id, document_update)
+    
+    if not updated_document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    existing_doc = documents_db[document_id]
-    updated_doc = Document(
-        id=document_id,
-        title=document_update.title,
-        content=document_update.content,
-        document_type=document_update.document_type,
-        created_at=existing_doc.created_at,
-        updated_at=datetime.now(),
-        version=existing_doc.version + 1
-    )
-    
-    documents_db[document_id] = updated_doc
-    return updated_doc
+    return DocumentResponse.model_validate(updated_document)
 
 
 @router.delete("/{document_id}")
-def delete_document(document_id: str):
+def delete_document(document_id: str, db: Session = Depends(get_db)):
     """Delete a document"""
-    if document_id not in documents_db:
+    service = DocumentService(db)
+    
+    if not service.delete_document(document_id):
         raise HTTPException(status_code=404, detail="Document not found")
     
-    del documents_db[document_id]
     return {"message": "Document deleted successfully"}
 
 
 @router.get("/{document_id}/pdf")
-def generate_document_pdf(document_id: str):
+def generate_document_pdf(document_id: str, db: Session = Depends(get_db)):
     """Generate PDF for a specific document"""
-    if document_id not in documents_db:
+    service = DocumentService(db)
+    document = service.get_document(document_id)
+    
+    if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    document = documents_db[document_id]
-    
     try:
-        pdf_bytes = generate_pdf_from_document(document)
+        document_response = DocumentResponse.model_validate(document)
+        pdf_bytes = generate_pdf_from_document(document_response)
         
         return Response(
             content=pdf_bytes,
@@ -248,3 +245,24 @@ def generate_document_pdf(document_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
+
+
+@router.get("/search/", response_model=DocumentSearchResponse)
+def search_documents(
+    query: str = Query(..., min_length=1),
+    limit: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Search documents by title"""
+    service = DocumentService(db)
+    documents = service.search_documents(query)
+    
+    # Limit results
+    limited_documents = documents[:limit]
+    document_responses = [DocumentResponse.model_validate(doc) for doc in limited_documents]
+    
+    return DocumentSearchResponse(
+        documents=document_responses,
+        query=query,
+        total=len(document_responses)
+    )
