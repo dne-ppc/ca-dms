@@ -125,3 +125,80 @@ def test_get_nonexistent_document():
     assert response.status_code == 404
     data = response.json()
     assert data["detail"] == "Document not found"
+
+
+def test_generate_pdf_for_document():
+    """Test generating PDF for a document"""
+    # Create a document first
+    document_data = {
+        "title": "PDF Test Document",
+        "content": {
+            "ops": [
+                {"insert": "This document will be converted to PDF\n"},
+                {"insert": "Second line of content\n"}
+            ]
+        },
+        "document_type": "governance"
+    }
+    
+    response = client.post("/api/v1/documents/", json=document_data)
+    created_doc = response.json()
+    doc_id = created_doc["id"]
+    
+    # Generate PDF for the document
+    response = client.get(f"/api/v1/documents/{doc_id}/pdf")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert len(response.content) > 0  # PDF should have content
+    
+
+def test_generate_pdf_for_nonexistent_document():
+    """Test generating PDF for a document that doesn't exist"""
+    response = client.get("/api/v1/documents/nonexistent-id/pdf")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"] == "Document not found"
+
+
+def test_pdf_generation_with_placeholders():
+    """Test PDF generation with placeholder objects in content"""
+    document_data = {
+        "title": "Document with Placeholders",
+        "content": {
+            "ops": [
+                {"insert": "This document has placeholders:\n"},
+                {
+                    "insert": {
+                        "version-table": {
+                            "data": {
+                                "version": "1.0",
+                                "date": "2024-01-01",
+                                "author": "Test Author"
+                            }
+                        }
+                    }
+                },
+                {"insert": "\n"},
+                {
+                    "insert": {
+                        "signature": {
+                            "label": "Board President Signature",
+                            "includeTitle": True
+                        }
+                    }
+                },
+                {"insert": "\n"}
+            ]
+        },
+        "document_type": "governance"
+    }
+    
+    response = client.post("/api/v1/documents/", json=document_data)
+    created_doc = response.json()
+    doc_id = created_doc["id"]
+    
+    # Generate PDF for the document
+    response = client.get(f"/api/v1/documents/{doc_id}/pdf")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert len(response.content) > 0
