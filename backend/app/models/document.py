@@ -30,6 +30,7 @@ class Document(Base):
     
     # Relationships
     history = relationship("DocumentHistory", back_populates="document", cascade="all, delete-orphan")
+    signature_requests = relationship("SignatureRequest", back_populates="document", cascade="all, delete-orphan")
     
     # Performance indexes for common queries
     __table_args__ = (
