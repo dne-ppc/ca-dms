@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
+import { IntroPage } from './pages/IntroPage'
 import Dashboard from './pages/Dashboard'
 import DocumentEditor from './pages/DocumentEditor'
 import Search from './pages/Search'
@@ -28,15 +29,15 @@ function App() {
       {/* Desktop Navigation */}
       <nav className="navbar hidden md:block">
         <div className="nav-content">
-          <Link to="/dashboard" className="nav-brand">
+          <Link to="/" className="nav-brand">
             <h1>CA-DMS</h1>
           </Link>
           <div className="nav-links">
-            <Link 
-              to="/dashboard" 
-              className={location.pathname === '/dashboard' ? 'nav-link active' : 'nav-link'}
+            <Link
+              to="/"
+              className={location.pathname === '/' ? 'nav-link active' : 'nav-link'}
             >
-              Dashboard
+              Home
             </Link>
             <Link 
               to="/editor" 
@@ -64,8 +65,9 @@ function App() {
 
       <main className="main-content pb-16 md:pb-0">
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/" element={<IntroPage />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+          <Route path="/dashboard-old" element={<Dashboard />} />
           <Route path="/editor/:id?" element={<DocumentEditor />} />
           <Route path="/search" element={<Search />} />
           <Route path="/notifications" element={<NotificationCenter />} />

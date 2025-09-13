@@ -315,6 +315,29 @@ class AuthService {
 
     return token
   }
+
+  async getCurrentUser(): Promise<User | null> {
+    const userContext = this.getCurrentUserContext()
+    if (!userContext) return null
+
+    return {
+      id: userContext.sub,
+      email: userContext.email || '',
+      name: userContext.name || userContext.email || '',
+      role: userContext.role
+    }
+  }
+}
+
+export interface User {
+  id: string
+  email: string
+  name: string
+  role?: string
 }
 
 export const authService = new AuthService()
+export const getCurrentUser = () => authService.getCurrentUser()
+export const isAuthenticated = () => authService.isAuthenticated()
+export const getAuthToken = () => authService.getStoredToken()
+export const logout = () => authService.logout()
