@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { marked } from 'marked'
 import './SimpleRichTextEditor.css'
 
 interface SimpleRichTextEditorProps {
@@ -16,6 +17,8 @@ export const SimpleRichTextEditor = ({
 }: SimpleRichTextEditorProps) => {
   const [content, setContent] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [markdownMode, setMarkdownMode] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
 
   useEffect(() => {
     if (initialContent) {
@@ -48,11 +51,25 @@ export const SimpleRichTextEditor = ({
 
   const handlePlaceholderClick = (type: string) => {
     onInsertPlaceholder?.(type)
-    
+
     // Insert placeholder text at current cursor position or end
     const placeholderText = `[${type.replace('-', ' ').toUpperCase()}]`
     const newContent = content + (content ? ' ' : '') + placeholderText
     handleContentChange(newContent)
+  }
+
+  const renderMarkdown = (text: string) => {
+    try {
+      // Configure marked for safe rendering
+      marked.setOptions({
+        breaks: true,
+        gfm: true,
+      })
+      return marked(text)
+    } catch (error) {
+      console.error('Markdown rendering error:', error)
+      return text
+    }
   }
 
   if (isLoading) {
@@ -64,7 +81,29 @@ export const SimpleRichTextEditor = ({
       {/* Simple Toolbar */}
       <div className="simple-toolbar">
         <div className="toolbar-group">
-          <select 
+          <label className="markdown-toggle">
+            <input
+              type="checkbox"
+              checked={markdownMode}
+              onChange={(e) => setMarkdownMode(e.target.checked)}
+            />
+            📝 Markdown
+          </label>
+
+          {markdownMode && (
+            <label className="preview-toggle">
+              <input
+                type="checkbox"
+                checked={previewMode}
+                onChange={(e) => setPreviewMode(e.target.checked)}
+              />
+              👁️ Preview
+            </label>
+          )}
+        </div>
+
+        <div className="toolbar-group">
+          <select
             onChange={(e) => {
               // Font size is cosmetic only for now
               console.log('Font size changed:', e.target.value)
@@ -76,8 +115,8 @@ export const SimpleRichTextEditor = ({
             <option value="5">Large</option>
             <option value="7">Huge</option>
           </select>
-          
-          <select 
+
+          <select
             onChange={(e) => {
               // Font family is cosmetic only for now
               console.log('Font family changed:', e.target.value)
@@ -151,33 +190,99 @@ export const SimpleRichTextEditor = ({
         </div>
       </div>
 
-      {/* Editor Content - Using textarea instead of contentEditable */}
-      <textarea
-        value={content}
-        onChange={(e) => handleContentChange(e.target.value)}
-        disabled={readOnly}
-        className="simple-editor-textarea"
-        style={{
-          width: '100%',
-          minHeight: '300px',
-          padding: '1rem',
-          direction: 'ltr',
-          textAlign: 'left',
-          unicodeBidi: 'embed',
-          writingMode: 'horizontal-tb',
-          fontFamily: 'inherit',
-          fontSize: '14px',
-          border: 'none',
-          borderTop: '1px solid var(--border-primary, #ccc)',
-          outline: 'none',
-          resize: 'vertical',
-          backgroundColor: readOnly ? 'var(--bg-secondary, #f5f5f5)' : 'var(--bg-primary, white)',
-          color: 'var(--text-primary, #333)'
-        }}
-        dir="ltr"
-        lang="en"
-        placeholder="Start typing your document content..."
-      />
+      {/* Editor Content */}
+      <div className="editor-container">
+        {markdownMode && previewMode ? (
+          /* Markdown Preview Mode */
+          <div className="editor-layout split-view">
+            <textarea
+              value={content}
+              onChange={(e) => handleContentChange(e.target.value)}
+              disabled={readOnly}
+              className="markdown-editor-textarea"
+              style={{
+                width: '50%',
+                minHeight: '300px',
+                padding: '1rem',
+                border: 'none',
+                borderRight: '1px solid var(--border-primary, #ccc)',
+                outline: 'none',
+                resize: 'none',
+                backgroundColor: readOnly ? 'var(--bg-secondary, #f5f5f5)' : 'var(--bg-primary, white)',
+                color: 'var(--text-primary, #333)',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+              }}
+              placeholder="Type your markdown here..."
+            />
+            <div
+              className="markdown-preview"
+              style={{
+                width: '50%',
+                minHeight: '300px',
+                padding: '1rem',
+                backgroundColor: 'var(--bg-primary, white)',
+                color: 'var(--text-primary, #333)',
+                overflow: 'auto',
+                borderLeft: '1px solid var(--border-primary, #ccc)',
+              }}
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(content)
+              }}
+            />
+          </div>
+        ) : markdownMode ? (
+          /* Markdown Edit Mode */
+          <textarea
+            value={content}
+            onChange={(e) => handleContentChange(e.target.value)}
+            disabled={readOnly}
+            className="markdown-editor-textarea"
+            style={{
+              width: '100%',
+              minHeight: '300px',
+              padding: '1rem',
+              border: 'none',
+              borderTop: '1px solid var(--border-primary, #ccc)',
+              outline: 'none',
+              resize: 'vertical',
+              backgroundColor: readOnly ? 'var(--bg-secondary, #f5f5f5)' : 'var(--bg-primary, white)',
+              color: 'var(--text-primary, #333)',
+              fontFamily: 'monospace',
+              fontSize: '14px',
+            }}
+            placeholder="Type your markdown here... (e.g., # Heading, **bold**, *italic*, [link](url))"
+          />
+        ) : (
+          /* Regular Text Mode */
+          <textarea
+            value={content}
+            onChange={(e) => handleContentChange(e.target.value)}
+            disabled={readOnly}
+            className="simple-editor-textarea"
+            style={{
+              width: '100%',
+              minHeight: '300px',
+              padding: '1rem',
+              direction: 'ltr',
+              textAlign: 'left',
+              unicodeBidi: 'embed',
+              writingMode: 'horizontal-tb',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              border: 'none',
+              borderTop: '1px solid var(--border-primary, #ccc)',
+              outline: 'none',
+              resize: 'vertical',
+              backgroundColor: readOnly ? 'var(--bg-secondary, #f5f5f5)' : 'var(--bg-primary, white)',
+              color: 'var(--text-primary, #333)'
+            }}
+            dir="ltr"
+            lang="en"
+            placeholder="Start typing your document content..."
+          />
+        )}
+      </div>
     </div>
   )
 }

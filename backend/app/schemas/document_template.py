@@ -12,7 +12,7 @@ from app.models.document_template import TemplateCategory, TemplateAccessLevel, 
 class TemplateFieldBase(BaseModel):
     field_name: str = Field(..., min_length=1, max_length=100)
     field_label: str = Field(..., min_length=1, max_length=255)
-    field_type: str = Field(..., regex="^(text|number|date|select|textarea|checkbox|radio|email|url|tel)$")
+    field_type: str = Field(..., pattern="^(text|number|date|select|textarea|checkbox|radio|email|url|tel)$")
     field_description: Optional[str] = None
     is_required: bool = False
     default_value: Optional[str] = None
@@ -30,7 +30,7 @@ class TemplateFieldCreate(TemplateFieldBase):
 class TemplateFieldUpdate(BaseModel):
     field_name: Optional[str] = Field(None, min_length=1, max_length=100)
     field_label: Optional[str] = Field(None, min_length=1, max_length=255)
-    field_type: Optional[str] = Field(None, regex="^(text|number|date|select|textarea|checkbox|radio|email|url|tel)$")
+    field_type: Optional[str] = Field(None, pattern="^(text|number|date|select|textarea|checkbox|radio|email|url|tel)$")
     field_description: Optional[str] = None
     is_required: Optional[bool] = None
     default_value: Optional[str] = None
@@ -180,7 +180,7 @@ class DocumentTemplateWithDetails(DocumentTemplate):
 # Template Usage and Analytics Schemas
 
 class TemplateUsageLogCreate(BaseModel):
-    action_type: str = Field(..., regex="^(used|previewed|downloaded|shared)$")
+    action_type: str = Field(..., pattern="^(used|previewed|downloaded|shared)$")
     document_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -224,8 +224,8 @@ class TemplateSearchFilters(BaseModel):
 class TemplateSearchRequest(BaseModel):
     query: Optional[str] = None
     filters: Optional[TemplateSearchFilters] = None
-    sort_by: str = Field("usage_count", regex="^(name|created_at|updated_at|usage_count|rating)$")
-    sort_order: str = Field("desc", regex="^(asc|desc)$")
+    sort_by: str = Field("usage_count", pattern="^(name|created_at|updated_at|usage_count|rating)$")
+    sort_order: str = Field("desc", pattern="^(asc|desc)$")
     page: int = Field(1, ge=1)
     limit: int = Field(20, ge=1, le=100)
 
@@ -273,7 +273,7 @@ class TemplateInstanceResponse(BaseModel):
 
 class BulkTemplateAction(BaseModel):
     template_ids: List[str] = Field(..., min_items=1, max_items=100)
-    action: str = Field(..., regex="^(publish|archive|delete|duplicate)$")
+    action: str = Field(..., pattern="^(publish|archive|delete|duplicate)$")
     target_category: Optional[TemplateCategory] = None  # For bulk category change
     target_access_level: Optional[TemplateAccessLevel] = None  # For bulk access change
 
@@ -290,11 +290,11 @@ class TemplateExportRequest(BaseModel):
     template_ids: List[str] = Field(..., min_items=1, max_items=50)
     include_reviews: bool = False
     include_analytics: bool = False
-    export_format: str = Field("json", regex="^(json|zip)$")
+    export_format: str = Field("json", pattern="^(json|zip)$")
 
 
 class TemplateImportRequest(BaseModel):
     templates_data: Dict[str, Any]  # JSON structure with templates
-    import_mode: str = Field("create_new", regex="^(create_new|update_existing|create_or_update)$")
+    import_mode: str = Field("create_new", pattern="^(create_new|update_existing|create_or_update)$")
     default_access_level: TemplateAccessLevel = TemplateAccessLevel.PRIVATE
     preserve_ids: bool = False

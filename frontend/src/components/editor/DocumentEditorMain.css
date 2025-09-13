@@ -1,0 +1,29 @@
+.document-editor-main {
+  background-color: #ffffff;
+  min-height: 100vh;
+}
+
+.document-editor-main .enhanced-toolbar {
+  width: 100%;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Screen reader only class for status messages */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .document-editor-main {
+    overflow-x: hidden;
+  }
+}

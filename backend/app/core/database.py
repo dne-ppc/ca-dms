@@ -17,10 +17,21 @@ Base = declarative_base()
 def init_db():
     """Initialize database connection"""
     global engine, SessionLocal
-    
+
     # For now, use SQLite for development if no DATABASE_URL is provided
     database_url = settings.DATABASE_URL or "sqlite:///./ca_dms.db"
-    
+
+    # Import models to ensure they are registered
+    try:
+        from app.models import (  # noqa
+            user, document, workflow, notification, security, compliance,
+            document_template, external_integration, digital_signature
+        )
+    except ImportError as e:
+        print(f"Warning: Could not import some models: {e}")
+        # Import available models
+        from app.models import user, document, workflow  # noqa
+
     # Optimized engine configuration for performance
     if "sqlite" in database_url:
         engine = create_engine(
@@ -48,12 +59,9 @@ def init_db():
             pool_recycle=3600,
             echo=False
         )
-    
+
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
-    # Import models to ensure they are registered
-    from app.models import document, user, workflow  # noqa
-    
+
     # Create all tables
     Base.metadata.create_all(bind=engine)
 

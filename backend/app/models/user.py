@@ -56,6 +56,10 @@ class User(Base):
     # Relationships
     notification_preferences = relationship("NotificationPreference", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    two_factor_settings = relationship("UserTwoFactor", back_populates="user", cascade="all, delete-orphan")
+    sso_accounts = relationship("UserSSOAccount", back_populates="user", cascade="all, delete-orphan")
+    consents = relationship("UserConsent", cascade="all, delete-orphan")
+    integrations = relationship("ExternalIntegration", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role.value})>"
@@ -68,7 +72,7 @@ class User(Base):
         # Check role-based permissions
         role_permissions = {
             UserRole.ADMIN: ["all"],
-            UserRole.BOARD_MEMBER: ["create", "read", "update", "delete", "approve"],
+            UserRole.BOARD_MEMBER: ["create", "read", "update", "delete", "approve", "audit_read"],
             UserRole.MANAGER: ["create", "read", "update"],
             UserRole.RESIDENT: ["read", "create_own"],
             UserRole.VIEWER: ["read"]

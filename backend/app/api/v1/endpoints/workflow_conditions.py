@@ -24,7 +24,7 @@ from app.schemas.workflow_conditions import (
 )
 from app.services.workflow_condition_service import WorkflowConditionService
 from app.services.escalation_service import EscalationService
-from app.core.auth import get_current_user
+from app.core.dependencies import get_current_user
 from app.models.user import User
 import logging
 

@@ -221,5 +221,50 @@ class UserService:
         
         self.db.commit()
         self.db.refresh(user)
-        
+
         return user
+
+    def create_user_from_dict(self, user_data: dict) -> User:
+        """Create user from dictionary data (used by SSO)"""
+        # Check if email or username already exists
+        existing_user = self.db.query(User).filter(
+            or_(User.email == user_data["email"], User.username == user_data["username"])
+        ).first()
+
+        if existing_user:
+            if existing_user.email == user_data["email"]:
+                raise ValueError("Email already registered")
+            else:
+                raise ValueError("Username already taken")
+
+        # Hash password
+        hashed_password = get_password_hash(user_data["password"])
+
+        # Create user instance
+        db_user = User(
+            id=str(uuid.uuid4()),
+            email=user_data["email"],
+            username=user_data["username"],
+            hashed_password=hashed_password,
+            full_name=user_data.get("full_name"),
+            title=user_data.get("title"),
+            phone=user_data.get("phone"),
+            role=user_data.get("role", UserRole.RESIDENT),
+            is_verified=user_data.get("is_verified", False)
+        )
+
+        # Set verification token if not already verified
+        if not db_user.is_verified:
+            db_user.verification_token = create_verification_token(user_data["email"])
+        else:
+            db_user.verified_at = datetime.utcnow()
+
+        self.db.add(db_user)
+        self.db.commit()
+        self.db.refresh(db_user)
+
+        return db_user
+
+    def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        """Internal method to verify password (for security service)"""
+        return verify_password(plain_password, hashed_password)

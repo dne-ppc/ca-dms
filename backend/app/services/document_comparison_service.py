@@ -226,87 +226,161 @@ class DocumentComparisonService:
         return text
     
     def _compare_operations(
-        self, 
-        old_ops: List[Dict[str, Any]], 
+        self,
+        old_ops: List[Dict[str, Any]],
         new_ops: List[Dict[str, Any]]
     ) -> List[DeltaChange]:
-        """Compare operations between two Delta documents"""
+        """
+        Compare operations between two Delta documents
+
+        Replaces SequenceMatcher-based approach with Delta-aware comparison
+        that can handle dictionaries (placeholders) and strings (text).
+        """
         changes = []
-        
-        # Use sequence matcher for high-level alignment
-        matcher = SequenceMatcher(None, old_ops, new_ops)
-        
         position = 0
-        
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
-                # Operations are identical - retain
-                for k in range(i1, i2):
-                    changes.append(DeltaChange(
-                        type='retain',
-                        old_op=old_ops[k],
-                        new_op=new_ops[j1 + (k - i1)] if j1 + (k - i1) < j2 else None,
-                        position=position,
-                        length=self._get_op_length(old_ops[k])
-                    ))
-                    position += self._get_op_length(old_ops[k])
-                    
-            elif tag == 'delete':
-                # Operations were deleted
-                for k in range(i1, i2):
-                    changes.append(DeltaChange(
-                        type='delete',
-                        old_op=old_ops[k],
-                        position=position,
-                        length=self._get_op_length(old_ops[k])
-                    ))
-                    position += self._get_op_length(old_ops[k])
-                    
-            elif tag == 'insert':
-                # Operations were inserted
-                for k in range(j1, j2):
+
+        # Handle empty cases
+        if not old_ops and not new_ops:
+            return changes
+
+        if not old_ops:
+            # All new operations are insertions
+            for i, new_op in enumerate(new_ops):
+                changes.append(DeltaChange(
+                    type='insert',
+                    new_op=new_op,
+                    position=position,
+                    length=self._get_op_length(new_op)
+                ))
+                position += self._get_op_length(new_op)
+            return changes
+
+        if not new_ops:
+            # All old operations are deletions
+            for i, old_op in enumerate(old_ops):
+                changes.append(DeltaChange(
+                    type='delete',
+                    old_op=old_op,
+                    position=position,
+                    length=self._get_op_length(old_op)
+                ))
+                position += self._get_op_length(old_op)
+            return changes
+
+        # Compare operations using custom Delta-aware logic
+        old_idx = 0
+        new_idx = 0
+
+        while old_idx < len(old_ops) or new_idx < len(new_ops):
+            if old_idx >= len(old_ops):
+                # Remaining new operations are insertions
+                while new_idx < len(new_ops):
                     changes.append(DeltaChange(
                         type='insert',
-                        new_op=new_ops[k],
+                        new_op=new_ops[new_idx],
                         position=position,
-                        length=self._get_op_length(new_ops[k])
+                        length=self._get_op_length(new_ops[new_idx])
                     ))
-                    
-            elif tag == 'replace':
-                # Operations were modified
-                for k in range(max(i2 - i1, j2 - j1)):
-                    old_op = old_ops[i1 + k] if i1 + k < i2 else None
-                    new_op = new_ops[j1 + k] if j1 + k < j2 else None
-                    
-                    if old_op and new_op:
-                        # Check if it's a modification or replacement
-                        attrs_changed = self._compare_attributes(old_op, new_op)
-                        changes.append(DeltaChange(
-                            type='modify',
-                            old_op=old_op,
-                            new_op=new_op,
-                            position=position,
-                            length=self._get_op_length(old_op),
-                            attributes_changed=attrs_changed
-                        ))
-                        position += self._get_op_length(old_op)
-                    elif old_op:
-                        changes.append(DeltaChange(
-                            type='delete',
-                            old_op=old_op,
-                            position=position,
-                            length=self._get_op_length(old_op)
-                        ))
-                        position += self._get_op_length(old_op)
-                    elif new_op:
-                        changes.append(DeltaChange(
-                            type='insert',
-                            new_op=new_op,
-                            position=position,
-                            length=self._get_op_length(new_op)
-                        ))
-        
+                    position += self._get_op_length(new_ops[new_idx])
+                    new_idx += 1
+                break
+
+            if new_idx >= len(new_ops):
+                # Remaining old operations are deletions
+                while old_idx < len(old_ops):
+                    changes.append(DeltaChange(
+                        type='delete',
+                        old_op=old_ops[old_idx],
+                        position=position,
+                        length=self._get_op_length(old_ops[old_idx])
+                    ))
+                    position += self._get_op_length(old_ops[old_idx])
+                    old_idx += 1
+                break
+
+            old_op = old_ops[old_idx]
+            new_op = new_ops[new_idx]
+
+            # Compare operations
+            if self._operations_equal(old_op, new_op):
+                # Operations are identical - retain
+                changes.append(DeltaChange(
+                    type='retain',
+                    old_op=old_op,
+                    new_op=new_op,
+                    position=position,
+                    length=self._get_op_length(old_op)
+                ))
+                position += self._get_op_length(old_op)
+                old_idx += 1
+                new_idx += 1
+
+            elif self._operations_similar(old_op, new_op):
+                # Operations are similar but modified
+                attrs_changed = self._compare_attributes(old_op, new_op)
+                changes.append(DeltaChange(
+                    type='modify',
+                    old_op=old_op,
+                    new_op=new_op,
+                    position=position,
+                    length=self._get_op_length(old_op),
+                    attributes_changed=attrs_changed
+                ))
+                position += self._get_op_length(old_op)
+                old_idx += 1
+                new_idx += 1
+
+            else:
+                # Operations are different - could be replace, delete+insert, etc.
+                # For simplicity, treat as delete old + insert new
+                changes.append(DeltaChange(
+                    type='delete',
+                    old_op=old_op,
+                    position=position,
+                    length=self._get_op_length(old_op)
+                ))
+                position += self._get_op_length(old_op)
+
+                changes.append(DeltaChange(
+                    type='insert',
+                    new_op=new_op,
+                    position=position,
+                    length=self._get_op_length(new_op)
+                ))
+
+                old_idx += 1
+                new_idx += 1
+
         return changes
+
+    def _operations_equal(self, op1: Dict[str, Any], op2: Dict[str, Any]) -> bool:
+        """Check if two operations are identical"""
+        return op1 == op2
+
+    def _operations_similar(self, op1: Dict[str, Any], op2: Dict[str, Any]) -> bool:
+        """
+        Check if two operations are similar enough to be considered modifications
+        rather than complete replacements
+        """
+        # Same operation type (both text or both placeholders)
+        insert1 = op1.get('insert')
+        insert2 = op2.get('insert')
+
+        if type(insert1) != type(insert2):
+            return False
+
+        # Both are text operations
+        if isinstance(insert1, str) and isinstance(insert2, str):
+            return True  # Text changes are modifications
+
+        # Both are placeholder operations
+        if isinstance(insert1, dict) and isinstance(insert2, dict):
+            # Same placeholder type
+            placeholder_types1 = set(insert1.keys()) & self.placeholder_types
+            placeholder_types2 = set(insert2.keys()) & self.placeholder_types
+            return placeholder_types1 == placeholder_types2 and len(placeholder_types1) > 0
+
+        return False
     
     def _get_op_length(self, op: Dict[str, Any]) -> int:
         """Get the length of a Delta operation"""
@@ -503,3 +577,19 @@ class DocumentComparisonService:
         """Check if an operation falls within a conflict range"""
         # Simplified check - would need more sophisticated position tracking
         return False  # Placeholder implementation
+
+    def _is_placeholder_operation(self, op: Dict[str, Any]) -> bool:
+        """
+        Check if an operation represents a placeholder object
+
+        Args:
+            op: Delta operation to check
+
+        Returns:
+            True if operation contains a placeholder object, False otherwise
+        """
+        if not isinstance(op.get('insert'), dict):
+            return False
+
+        insert_obj = op['insert']
+        return any(placeholder in insert_obj for placeholder in self.placeholder_types)

@@ -189,8 +189,8 @@ class TemplateUsageLog(Base):
     ip_address = Column(String(45), nullable=True)
     session_id = Column(String(100), nullable=True)
     
-    # Metadata
-    metadata = Column(JSON, nullable=True)  # Additional context data
+    # Usage metadata
+    usage_metadata = Column(JSON, nullable=True)  # Additional context data
     
     # Timestamp
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)

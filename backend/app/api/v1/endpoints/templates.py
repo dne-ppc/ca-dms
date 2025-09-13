@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.core.dependencies import get_current_user
 from app.services.template_service import TemplateService
 from app.schemas.document_template import (
     DocumentTemplateCreate,
@@ -68,8 +68,8 @@ async def search_templates(
     tags: Optional[str] = Query(None, description="Comma-separated list of tags to filter by"),
     min_rating: Optional[float] = Query(None, ge=1.0, le=5.0, description="Minimum average rating"),
     is_system_template: Optional[bool] = Query(None, description="Filter system templates"),
-    sort_by: str = Query("usage_count", regex="^(name|created_at|updated_at|usage_count|rating)$"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    sort_by: str = Query("usage_count", pattern="^(name|created_at|updated_at|usage_count|rating)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: Optional[Dict[str, Any]] = Depends(get_current_user),

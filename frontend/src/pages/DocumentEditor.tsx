@@ -28,6 +28,11 @@ const DocumentEditor = () => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
   const [isPDFModalOpen, setIsPDFModalOpen] = useState(false)
 
+  // Track the initially loaded values to compare against
+  const [initialContent, setInitialContent] = useState('')
+  const [initialTitle, setInitialTitle] = useState('Untitled Document')
+  const [initialDocumentType, setInitialDocumentType] = useState('governance')
+
   useEffect(() => {
     if (id) {
       loadDocument(id)
@@ -47,10 +52,15 @@ const DocumentEditor = () => {
 
   // Track changes to mark document as having unsaved changes
   useEffect(() => {
-    if (!isLoading && (title !== 'Untitled Document' || content !== '')) {
-      setHasUnsavedChanges(true)
+    if (!isLoading) {
+      const hasChanges = (
+        title !== initialTitle ||
+        content !== initialContent ||
+        documentType !== initialDocumentType
+      )
+      setHasUnsavedChanges(hasChanges)
     }
-  }, [title, content, documentType, isLoading])
+  }, [title, content, documentType, isLoading, initialTitle, initialContent, initialDocumentType])
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
@@ -88,23 +98,37 @@ const DocumentEditor = () => {
             setTitle(tempData.title)
             setDocumentType(tempData.documentType)
             setContent(tempData.content)
+            // Set initial values to the original document, not temp data
+            setInitialTitle(doc.title)
+            setInitialDocumentType(doc.document_type)
+            setInitialContent(JSON.stringify(doc.content))
             setHasUnsavedChanges(true)
             setSaveMessage('Restored from unsaved changes')
             setTimeout(() => setSaveMessage(''), 3000)
           } else {
             // User chose to discard temp data
             tempStorageService.clearTempDocument(docId)
+            const docContent = JSON.stringify(doc.content)
             setTitle(doc.title)
             setDocumentType(doc.document_type)
-            setContent(JSON.stringify(doc.content))
+            setContent(docContent)
+            // Set initial values
+            setInitialTitle(doc.title)
+            setInitialDocumentType(doc.document_type)
+            setInitialContent(docContent)
             setHasUnsavedChanges(false)
             setLastSaved(new Date())
           }
         } else {
           // No temp data or temp data is older
+          const docContent = JSON.stringify(doc.content)
           setTitle(doc.title)
           setDocumentType(doc.document_type)
-          setContent(JSON.stringify(doc.content))
+          setContent(docContent)
+          // Set initial values
+          setInitialTitle(doc.title)
+          setInitialDocumentType(doc.document_type)
+          setInitialContent(docContent)
           setHasUnsavedChanges(false)
           setLastSaved(new Date())
         }
@@ -201,16 +225,21 @@ const DocumentEditor = () => {
 
       if (response.ok) {
         const result = await response.json()
-        
+
         // Clear temp storage when document version is successfully saved
         if (id) {
           tempStorageService.clearTempDocument(id)
         }
-        
+
+        // Update initial values to current values since they're now saved
+        setInitialTitle(title.trim())
+        setInitialContent(content)
+        setInitialDocumentType(documentType)
+
         setSaveMessage('Document saved successfully!')
         setHasUnsavedChanges(false)
         setLastSaved(new Date())
-        
+
         // If creating new document, redirect to edit mode
         if (!id && result.id) {
           setTimeout(() => {
