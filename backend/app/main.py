@@ -220,6 +220,90 @@ def custom_openapi():
         "altText": "CA-DMS Logo"
     }
 
+    # Add tags definition for API organization
+    openapi_schema["tags"] = [
+        {
+            "name": "Authentication",
+            "description": "User authentication, registration, and JWT token management"
+        },
+        {
+            "name": "Documents",
+            "description": "Document CRUD operations, version control, and content management"
+        },
+        {
+            "name": "Templates",
+            "description": "Document template creation, management, and placeholder configuration"
+        },
+        {
+            "name": "Workflows",
+            "description": "Approval workflow configuration and process management"
+        },
+        {
+            "name": "Workflow Conditions",
+            "description": "Conditional logic and rules for workflow automation"
+        },
+        {
+            "name": "Collaboration",
+            "description": "Real-time collaborative editing and presence tracking"
+        },
+        {
+            "name": "Presence",
+            "description": "User presence tracking and real-time status updates"
+        },
+        {
+            "name": "Collaborative Placeholders",
+            "description": "Shared placeholder management for collaborative documents"
+        },
+        {
+            "name": "Notifications",
+            "description": "User notification system and delivery management"
+        },
+        {
+            "name": "Document Comparison",
+            "description": "Document version comparison and diff visualization"
+        },
+        {
+            "name": "Security",
+            "description": "Two-factor authentication, SSO, and security audit features"
+        },
+        {
+            "name": "API Enhancements",
+            "description": "GraphQL endpoints, webhooks, API key management, and rate limiting"
+        },
+        {
+            "name": "Cache Management",
+            "description": "Redis cache operations and performance optimization"
+        },
+        {
+            "name": "Asset Management",
+            "description": "File upload, CDN integration, and media asset handling"
+        },
+        {
+            "name": "External Integrations",
+            "description": "Third-party service integrations and API connections"
+        },
+        {
+            "name": "Database Management",
+            "description": "Database operations, migrations, and data management"
+        },
+        {
+            "name": "Horizontal Scaling",
+            "description": "Load balancing, auto-scaling, and performance monitoring"
+        },
+        {
+            "name": "Intro Page",
+            "description": "Main dashboard and intro page data coordination"
+        },
+        {
+            "name": "Individual Services",
+            "description": "Granular access to individual service components"
+        },
+        {
+            "name": "WebSockets",
+            "description": "Real-time WebSocket connections for live collaboration"
+        }
+    ]
+
     # Add custom extensions for better documentation
     openapi_schema["x-tagGroups"] = [
         {

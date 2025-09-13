@@ -46,16 +46,11 @@ except ImportError:
 
     cache_manager = CacheManager()
 
-    class IntroPageResponse(BaseModel):
-        user_id: str
-        user_statistics: Dict[str, Any]
-        system_overview: Dict[str, Any]
-        actionable_items: Dict[str, Any]
-        activity_feed: Dict[str, Any]
-        personalization: Dict[str, Any]
-        performance_metrics: Dict[str, Any]
-        last_updated: str
-        data_sources: list
+    # Use real schema imports to ensure proper OpenAPI generation
+    from app.schemas.intro_page import (
+        IntroPageResponse, UserStatistics, SystemOverview,
+        ActionableItems, ActivityFeed, Personalization, PerformanceMetrics
+    )
 
 
 # Router configuration

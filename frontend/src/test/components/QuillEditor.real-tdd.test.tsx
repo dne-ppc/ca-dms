@@ -94,13 +94,15 @@ describe('QuillEditor TDD - RED Phase (Expecting Failures)', () => {
         </TestWrapper>
       )
 
+      // Wait for editor to load AND process malformed content
       await waitFor(() => {
         expect(screen.getByTestId('quill-editor')).toBeInTheDocument()
       }, { timeout: 5000 })
 
-      // Should show error indicator or fallback to plain text
-      // This will fail because malformed content handling isn't robust
-      expect(screen.getByTestId('content-parse-error')).toBeInTheDocument()
+      // Wait a bit more for content processing
+      await waitFor(() => {
+        expect(screen.getByTestId('content-parse-error')).toBeInTheDocument()
+      }, { timeout: 2000 })
     })
 
     it('should handle extremely large content without crashing', async () => {
