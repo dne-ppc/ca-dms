@@ -1,0 +1,180 @@
+/* Enhanced Toolbar Styles */
+.enhanced-toolbar {
+  display: flex;
+  width: 100%;
+  min-height: 80px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  padding: 12px 16px;
+  gap: 16px;
+}
+
+/* Google Docs-style design */
+.enhanced-toolbar.google-docs-style {
+  font-family: 'Google Sans', 'Segoe UI', 'Roboto', sans-serif;
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 1px solid #dadce0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive design */
+.enhanced-toolbar.responsive-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+@media (min-width: 768px) {
+  .enhanced-toolbar.responsive-toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* Toolbar sections */
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.toolbar-section:last-child {
+  border-right: none;
+}
+
+/* Button styles */
+.enhanced-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.enhanced-toolbar button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.enhanced-toolbar button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.enhanced-toolbar button:active {
+  background-color: #e5e7eb;
+  transform: translateY(1px);
+}
+
+.enhanced-toolbar button:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.enhanced-toolbar button:disabled:hover {
+  background-color: transparent;
+  transform: none;
+}
+
+/* Save button specific styles */
+.enhanced-toolbar button[data-testid="save-button"] {
+  background-color: #3b82f6;
+  color: white;
+  min-width: auto;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+.enhanced-toolbar button[data-testid="save-button"]:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.enhanced-toolbar button[data-testid="save-button"]:disabled {
+  background-color: #d1d5db;
+  color: #6b7280;
+}
+
+/* Unsaved indicator */
+.unsaved-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #92400e;
+}
+
+/* Format groups */
+.format-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.format-group:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .enhanced-toolbar {
+    padding: 8px 12px;
+    gap: 12px;
+    min-height: auto;
+  }
+
+  .enhanced-toolbar button {
+    min-width: 28px;
+    height: 28px;
+    padding: 4px;
+  }
+
+  .format-group {
+    padding: 0 4px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .enhanced-toolbar {
+    border-bottom: 2px solid #000000;
+  }
+
+  .enhanced-toolbar button {
+    border: 1px solid #374151;
+  }
+
+  .enhanced-toolbar button:hover {
+    background-color: #000000;
+    color: #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-toolbar button {
+    transition: none;
+  }
+
+  .enhanced-toolbar button:active {
+    transform: none;
+  }
+}
