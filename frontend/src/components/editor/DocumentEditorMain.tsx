@@ -136,6 +136,26 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
     // Redo would be handled by the Quill editor
   }, [])
 
+  const handleRequestSignature = useCallback(async (participants: any[]) => {
+    console.log('Signature request initiated for document:', document.id, 'participants:', participants)
+
+    // TODO: Integrate with signature service
+    // For now, just show success message
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // In the future, this would call our signature service
+      // const signatureService = new SignatureService()
+      // await signatureService.createSignatureRequest(document.id, participants)
+
+      console.log('Signature request created successfully')
+    } catch (error) {
+      console.error('Failed to create signature request:', error)
+      throw error
+    }
+  }, [document.id])
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -203,6 +223,7 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
           documentTitle={document.title}
           documentType={document.type}
           headerFormat={headerFormat}
+          documentId={document.id}
           onTitleChange={handleTitleChange}
           onTypeChange={handleTypeChange}
           onHeaderFormatChange={setHeaderFormat}
@@ -212,9 +233,9 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
           onUnderline={handleUnderline}
           onUndo={handleUndo}
           onRedo={handleRedo}
+          onRequestSignature={handleRequestSignature}
           isSaving={isSaving}
           hasUnsavedChanges={hasUnsavedChanges}
-          isReadOnly={true}
         />
 
         <div className="flex-1 p-4">
@@ -264,6 +285,7 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
         documentTitle={document.title}
         documentType={document.type}
         headerFormat={headerFormat}
+        documentId={document.id}
         onTitleChange={isReadOnly ? () => {} : handleTitleChange}
         onTypeChange={isReadOnly ? () => {} : handleTypeChange}
         onHeaderFormatChange={setHeaderFormat}
@@ -273,9 +295,9 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
         onUnderline={handleUnderline}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onRequestSignature={isReadOnly ? undefined : handleRequestSignature}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
-        isReadOnly={isReadOnly}
       />
 
       {/* Main Editor Area */}

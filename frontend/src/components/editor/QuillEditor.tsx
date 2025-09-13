@@ -113,12 +113,26 @@ export const QuillEditor = ({
   }
 
   const insertVersionTable = (quill: Quill) => {
+    console.log('TDD Debug: insertVersionTable called')
     // TDD: Enhanced validation for version tables
-    const selection = quill.getSelection()
-    if (!selection) return
+    let selection = quill.getSelection()
+
+    // TDD: If no selection, set cursor at end of document
+    if (!selection) {
+      const length = quill.getLength()
+      quill.setSelection(length - 1)
+      selection = quill.getSelection()
+    }
+
+    if (!selection) {
+      setValidationError('Cannot determine cursor position for insertion')
+      return
+    }
 
     // TDD: Check for duplicate version tables
+    console.log('TDD Debug: insertVersionTable - hasVersionTable:', hasVersionTable)
     if (hasVersionTable) {
+      console.log('TDD Debug: Setting duplicate version table error')
       setValidationError('Document already contains a version table')
       return
     }
@@ -141,11 +155,12 @@ export const QuillEditor = ({
 
     // Insert at the beginning of the document
     try {
-      quill.insertEmbed(0, 'version-table', versionData)
-      quill.insertText(1, '\n') // Add newline after version table
-      quill.setSelection(2) // Move cursor after the version table
+      // TDD: For now, insert a simple text placeholder since custom embeds need Quill blot registration
+      console.log('TDD Debug: Attempting to insert version table text at position 0')
+      quill.insertText(0, '[VERSION TABLE - v1.0]\n')
 
       // TDD: Update state and announce to screen readers
+      console.log('TDD Debug: Setting hasVersionTable to true after successful insertion')
       setHasVersionTable(true)
       setValidationError(null)
 
@@ -163,13 +178,30 @@ export const QuillEditor = ({
         document.body.appendChild(versionTableElement)
       }, 100)
     } catch (error) {
+      console.log('TDD Debug: Failed to insert version table:', error)
       setValidationError('Failed to insert version table')
     }
   }
 
   const insertSignatureField = (quill: Quill) => {
-    const selection = quill.getSelection()
-    if (!selection) return
+    console.log('TDD Debug: insertSignatureField started')
+    let selection = quill.getSelection()
+    console.log('TDD Debug: selection:', selection)
+
+    // TDD: If no selection, set cursor at end of document
+    if (!selection) {
+      console.log('TDD Debug: No selection, setting cursor at document end')
+      const length = quill.getLength()
+      quill.setSelection(length - 1)
+      selection = quill.getSelection()
+      console.log('TDD Debug: New selection after setting:', selection)
+    }
+
+    if (!selection) {
+      console.log('TDD Debug: Still no selection after fallback, cannot insert')
+      setValidationError('Cannot determine cursor position for insertion')
+      return
+    }
 
     // TDD: Create default signature field data (intentionally incomplete for validation)
     const signatureData: SignatureData = {
@@ -177,18 +209,21 @@ export const QuillEditor = ({
       date: '',
       title: ''
     }
+    console.log('TDD Debug: Created signature data:', signatureData)
 
     // TDD: Check if editor is read-only
     if (readOnly) {
+      console.log('TDD Debug: Editor is read-only, setting error')
       setValidationError('Cannot insert placeholders in read-only mode')
       return
     }
 
     // TDD: Always validate placeholder data before insertion - empty data is invalid
-    console.log('TDD Debug: Checking signature data:', signatureData)
+    console.log('TDD Debug: Checking signature data validation...')
     if (!signatureData.name && !signatureData.title && !signatureData.date) {
-      console.log('TDD Debug: Signature validation failed - setting error')
+      console.log('TDD Debug: Signature validation failed - setting validation error')
       setValidationError('Placeholder validation failed: signature field requires at least one field')
+      console.log('TDD Debug: validationError state should be set now')
       return
     }
     console.log('TDD Debug: Signature validation passed')

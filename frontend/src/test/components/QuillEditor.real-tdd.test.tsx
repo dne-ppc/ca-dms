@@ -173,14 +173,26 @@ describe('QuillEditor TDD - RED Phase (Expecting Failures)', () => {
         expect(screen.getByTestId('quill-editor')).toBeInTheDocument()
       }, { timeout: 5000 })
 
+      // Wait for loading to complete
+      await waitFor(() => {
+        expect(screen.queryByTestId('quill-loading')).not.toBeInTheDocument()
+      }, { timeout: 2000 })
+
       // Try to insert version table twice
       const versionTableButton = screen.getByTestId('insert-version-table')
       await user.click(versionTableButton)
+
+      // Wait for first version table to be inserted
+      await waitFor(() => {
+        expect(screen.getByTestId('version-table-placeholder')).toBeInTheDocument()
+      }, { timeout: 1000 })
+
       await user.click(versionTableButton) // Second attempt
 
       // Should show error message and not insert duplicate
-      // This will fail because duplicate prevention isn't implemented
-      expect(screen.getByTestId('duplicate-version-table-error')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-version-table-error')).toBeInTheDocument()
+      }, { timeout: 2000 })
 
       // Should only have one version table
       const versionTables = screen.getAllByTestId('version-table-placeholder')

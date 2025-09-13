@@ -12,12 +12,14 @@ import { DocumentTitleInput } from './DocumentTitleInput'
 import { DocumentTypeSelector } from './DocumentTypeSelector'
 import { HeaderFormatSelector } from './HeaderFormatSelector'
 import { AdvancedReportingButton } from './AdvancedReportingButton'
+import { DigitalSignatureButton } from './DigitalSignatureButton'
 import './EnhancedToolbar.css'
 
 interface EnhancedToolbarProps {
   documentTitle: string
   documentType: string
   headerFormat: string
+  documentId?: string
   onTitleChange: (title: string) => void
   onTypeChange: (type: string) => void
   onHeaderFormatChange: (format: string) => void
@@ -27,6 +29,7 @@ interface EnhancedToolbarProps {
   onUnderline: () => void
   onUndo: () => void
   onRedo: () => void
+  onRequestSignature?: (participants: any[]) => void
   isSaving?: boolean
   hasUnsavedChanges?: boolean
   className?: string
@@ -36,6 +39,7 @@ export const EnhancedToolbar: React.FC<EnhancedToolbarProps> = ({
   documentTitle,
   documentType,
   headerFormat,
+  documentId,
   onTitleChange,
   onTypeChange,
   onHeaderFormatChange,
@@ -45,6 +49,7 @@ export const EnhancedToolbar: React.FC<EnhancedToolbarProps> = ({
   onUnderline,
   onUndo,
   onRedo,
+  onRequestSignature,
   isSaving = false,
   hasUnsavedChanges = false,
   className = ''
@@ -173,6 +178,15 @@ export const EnhancedToolbar: React.FC<EnhancedToolbarProps> = ({
           >
             <Redo className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Digital Signature */}
+        <div className="border-l border-gray-200 pl-3">
+          <DigitalSignatureButton
+            documentId={documentId}
+            onRequestSignature={onRequestSignature}
+            disabled={!documentId || isSaving}
+          />
         </div>
 
         {/* Advanced Reporting */}
