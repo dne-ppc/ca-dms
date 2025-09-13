@@ -144,20 +144,24 @@ class TestWorkflowServiceTDDFocused:
 
     def test_start_workflow_instance(self, workflow_service):
         """Test starting a workflow instance"""
+        # Mock document
+        mock_document = Mock(id="doc-123", document_type="policy", created_by="user-123")
+
         # Mock workflow definition
         mock_workflow = Mock(
             id="wf-123",
             name="Test Workflow",
+            status=WorkflowStatus.ACTIVE,
             steps=[Mock(name="Step 1", step_order=1)]
         )
-        workflow_service.db.query.return_value.filter.return_value.first.return_value = mock_workflow
 
-        instance_data = WorkflowInstanceCreate(
-            workflow_id="wf-123",
-            document_id="doc-123"
-        )
+        # Set up mock returns for both queries
+        workflow_service.db.query.return_value.filter.return_value.first.side_effect = [
+            mock_document,  # First query for document
+            mock_workflow   # Second query for workflow
+        ]
 
-        result = workflow_service.start_workflow_instance(instance_data, "user-123")
+        result = workflow_service.start_workflow("doc-123", "wf-123", "user-123")
 
         # Should create database records
         workflow_service.db.add.assert_called()
@@ -179,9 +183,9 @@ class TestWorkflowServiceTDDFocused:
             Mock(id="wi-1", document_id="doc-123"),
             Mock(id="wi-2", document_id="doc-123")
         ]
-        workflow_service.db.query.return_value.filter.return_value.all.return_value = mock_instances
+        workflow_service.db.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_instances
 
-        results = workflow_service.get_workflow_instances_for_document("doc-123")
+        results = workflow_service.get_document_workflows("doc-123")
 
         assert len(results) == 2
         workflow_service.db.query.assert_called()
@@ -198,7 +202,7 @@ class TestWorkflowServiceTDDFocused:
         ]
         workflow_service.db.query.return_value.filter.return_value.all.return_value = mock_tasks
 
-        results = workflow_service.get_pending_tasks_for_user("user-123")
+        results = workflow_service.get_user_pending_approvals("user-123")
 
         assert len(results) == 2
         workflow_service.db.query.assert_called()

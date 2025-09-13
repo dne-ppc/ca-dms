@@ -280,9 +280,10 @@ export const QuillEditor = ({
           }
         }
 
-        // TDD: Enhanced change handler with performance monitoring
+        // TDD: Enhanced change handler with performance monitoring and throttling
         let changeCounter = 0
         let lastChangeTime = Date.now()
+        let throttleTimer: NodeJS.Timeout | null = null
 
         const handleTextChange = () => {
           const now = Date.now()
@@ -299,12 +300,19 @@ export const QuillEditor = ({
 
           setChangeCount(changeCounter)
 
-          try {
-            const content = JSON.stringify(quill.getContents())
-            onChange?.(content)
-          } catch (error) {
-            setValidationError('Failed to serialize content')
+          // TDD: Throttle onChange calls to prevent memory leaks during rapid typing
+          if (throttleTimer) {
+            clearTimeout(throttleTimer)
           }
+
+          throttleTimer = setTimeout(() => {
+            try {
+              const content = JSON.stringify(quill.getContents())
+              onChange?.(content)
+            } catch (error) {
+              setValidationError('Failed to serialize content')
+            }
+          }, 100) // 100ms throttle
         }
 
         quill.on('text-change', handleTextChange)
@@ -312,6 +320,9 @@ export const QuillEditor = ({
         // Store cleanup function
         quillRef.current.cleanup = () => {
           quill.off('text-change', handleTextChange)
+          if (throttleTimer) {
+            clearTimeout(throttleTimer)
+          }
         }
 
         setIsLoading(false)

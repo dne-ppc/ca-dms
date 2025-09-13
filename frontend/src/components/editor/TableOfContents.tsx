@@ -220,7 +220,14 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             tabIndex={0}
           >
             <div className="flex items-center justify-between">
-              <span>{item.text}</span>
+              <span className="flex items-center">
+                {showLineNumbers && (
+                  <span className="text-xs text-gray-400 mr-2 w-8 text-right">
+                    {item.lineNumber}
+                  </span>
+                )}
+                {item.text}
+              </span>
               {showCounts && headerCounts[item.level] && (
                 <span className="text-xs text-gray-400">
                   ({headerCounts[item.level]})
