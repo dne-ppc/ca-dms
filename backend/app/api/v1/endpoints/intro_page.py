@@ -84,9 +84,140 @@ class UserIDValidator(BaseModel):
 @router.get(
     "/intro-page/{user_id}",
     response_model=IntroPageResponse,
-    summary="Get Intro Page Data",
-    description="Retrieve comprehensive intro page data for a specific user",
-    response_description="Complete intro page data including statistics, actionable items, and personalization"
+    summary="Get Comprehensive Intro Page Data",
+    description="""
+    **Retrieve complete intro page dashboard data for a specific user**
+
+    This endpoint serves as the primary data coordinator for the intro page dashboard,
+    aggregating information from multiple services to provide a comprehensive view of:
+
+    📊 **User Statistics**: Document counts, templates, recent activity
+    🔍 **System Overview**: Total users, active documents, system health
+    ⚡ **Actionable Items**: Pending approvals, urgent tasks, overdue items
+    📰 **Activity Feed**: Recent activities and notifications
+    ⚙️ **Personalization**: Theme, layout, and widget preferences
+    📈 **Performance Metrics**: Response times, cache hits, data sources
+
+    ### Authentication Required
+    This endpoint requires a valid JWT token in the Authorization header.
+
+    ### Rate Limiting
+    - **Standard users**: 100 requests per minute
+    - **Rate limit headers** included in response
+
+    ### Caching
+    - **Cache TTL**: 60 seconds for user-specific data
+    - **ETag support** for efficient caching
+    - **Last-Modified headers** included
+
+    ### Error Handling
+    - **Fallback mode**: Returns default data if services are unavailable
+    - **Graceful degradation**: Partial data returned when possible
+    - **Detailed error messages** for troubleshooting
+    """,
+    response_description="Complete intro page data structure with all dashboard components",
+    responses={
+        200: {
+            "description": "Successfully retrieved intro page data",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "user_id": "user-abc123",
+                        "user_statistics": {
+                            "user_id": "user-abc123",
+                            "documents": 42,
+                            "templates": 8,
+                            "recent_documents": [
+                                {
+                                    "id": "doc-123",
+                                    "title": "Board Meeting Minutes - September 2025",
+                                    "updated_at": "2025-09-12T10:30:00Z",
+                                    "status": "approved"
+                                }
+                            ],
+                            "document_types": {
+                                "meeting_minutes": 15,
+                                "policies": 12,
+                                "notices": 15
+                            }
+                        },
+                        "system_overview": {
+                            "total_users": 150,
+                            "active_documents": 1250,
+                            "documents_today": 8,
+                            "documents_this_week": 45,
+                            "system_health_score": 98.5
+                        },
+                        "actionable_items": {
+                            "user_id": "user-abc123",
+                            "pending_approvals": 3,
+                            "urgent_tasks": 1,
+                            "overdue_items": 0,
+                            "items": [
+                                {
+                                    "id": "approval-456",
+                                    "type": "document_approval",
+                                    "title": "Budget Proposal Review",
+                                    "due_date": "2025-09-15T17:00:00Z",
+                                    "priority": "high"
+                                }
+                            ]
+                        },
+                        "last_updated": "2025-09-12T10:45:23.123Z",
+                        "performance_metrics": {
+                            "coordination_time_ms": 234.5,
+                            "cache_hit_rate": 85.2,
+                            "request_id": "req-abc123"
+                        }
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "Authentication required - Invalid or missing JWT token",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Authentication required. Please provide a valid JWT token."
+                    }
+                }
+            }
+        },
+        422: {
+            "description": "Invalid user ID format",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid user ID: must be alphanumeric with hyphens/underscores, 3-50 characters"
+                    }
+                }
+            }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Rate limit exceeded. Please try again later.",
+                        "retry_after": 60
+                    }
+                }
+            }
+        },
+        500: {
+            "description": "Internal server error - Service coordination failed",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Service coordination failed. Fallback data provided.",
+                        "fallback_mode": True
+                    }
+                }
+            }
+        }
+    },
+    tags=["Intro Page"],
+    operation_id="get_intro_page_data"
 )
 async def get_intro_page(
     user_id: str,

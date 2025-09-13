@@ -229,14 +229,11 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should auto-collapse panel on mobile', () => {
-      const mockUseDeviceDetection = vi.fn().mockReturnValue({
+      // Set mobile mode for this test before rendering
+      mockUseDeviceDetection.mockImplementation(() => ({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
-      })
-
-      vi.doMock('../../hooks/useDeviceDetection', () => ({
-        useDeviceDetection: mockUseDeviceDetection
       }))
 
       render(<DocumentEditorMain {...defaultProps} />)
@@ -247,27 +244,13 @@ describe('DocumentEditorMain', () => {
   })
 
   describe('Mobile Experience', () => {
-    beforeEach(() => {
-      // Reset mock before each test
-      mockUseDeviceDetection.mockReset()
-    })
-
-    afterEach(() => {
-      // Reset to desktop default after each test
-      mockUseDeviceDetection.mockReturnValue({
-        isMobile: false,
-        isDesktop: true,
-        breakpoint: 'desktop'
-      })
-    })
-
     it('should show mobile restriction message', () => {
-      // Set mobile mode for this test
-      mockUseDeviceDetection.mockReturnValue({
+      // Set mobile mode for this test before rendering
+      mockUseDeviceDetection.mockImplementation(() => ({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
-      })
+      }))
 
       render(<DocumentEditorMain {...defaultProps} />)
 
@@ -275,12 +258,12 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should disable editing controls on mobile', () => {
-      // Set mobile mode for this test
-      mockUseDeviceDetection.mockReturnValue({
+      // Set mobile mode for this test before rendering
+      mockUseDeviceDetection.mockImplementation(() => ({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
-      })
+      }))
 
       render(<DocumentEditorMain {...defaultProps} />)
 
@@ -289,12 +272,12 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should hide right panel by default on mobile', () => {
-      // Set mobile mode for this test
-      mockUseDeviceDetection.mockReturnValue({
+      // Set mobile mode for this test before rendering
+      mockUseDeviceDetection.mockImplementation(() => ({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
-      })
+      }))
 
       render(<DocumentEditorMain {...defaultProps} />)
 
@@ -303,12 +286,12 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should adapt toolbar for mobile', () => {
-      // Set mobile mode for this test
-      mockUseDeviceDetection.mockReturnValue({
+      // Set mobile mode for this test before rendering
+      mockUseDeviceDetection.mockImplementation(() => ({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
-      })
+      }))
 
       render(<DocumentEditorMain {...defaultProps} />)
 

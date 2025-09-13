@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { EnhancedToolbar } from './EnhancedToolbar'
 import { EnhancedQuillEditor } from './EnhancedQuillEditor'
 import { RightHandPanel } from './RightHandPanel'
@@ -49,13 +49,21 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
   const [headerFormat, setHeaderFormat] = useState('normal')
   const [isCollapsed, setIsCollapsed] = useState(rightPanelCollapsed || isMobile)
 
+  // Ref for debouncing timeout
+  const titleDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   // Handle document title changes
   const handleTitleChange = useCallback((title: string) => {
     const updatedDocument = { ...document, title }
     setHasUnsavedChanges(true)
 
+    // Clear existing timeout
+    if (titleDebounceTimeoutRef.current) {
+      clearTimeout(titleDebounceTimeoutRef.current)
+    }
+
     // Debounce the actual update call
-    const timeoutId = setTimeout(async () => {
+    titleDebounceTimeoutRef.current = setTimeout(async () => {
       try {
         setUpdateError(null)
         await onDocumentUpdate(updatedDocument)
@@ -64,8 +72,6 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
         console.error('Document update failed:', error)
       }
     }, 300)
-
-    return () => clearTimeout(timeoutId)
   }, [document, onDocumentUpdate])
 
   // Handle document type changes
@@ -168,6 +174,20 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
       setIsCollapsed(true)
     }
   }, [isMobile])
+
+  // Sync internal state with rightPanelCollapsed prop
+  useEffect(() => {
+    setIsCollapsed(rightPanelCollapsed || isMobile)
+  }, [rightPanelCollapsed, isMobile])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (titleDebounceTimeoutRef.current) {
+        clearTimeout(titleDebounceTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Mobile restriction message
   if (isMobile) {

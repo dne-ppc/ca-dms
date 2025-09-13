@@ -49,18 +49,21 @@ describe('TableOfContents', () => {
       id: 'main-title',
       text: 'Main Title',
       level: 1,
+      lineNumber: 1,
       anchor: '#main-title',
       children: [
         {
           id: 'section-one',
           text: 'Section One',
           level: 2,
+          lineNumber: 3,
           anchor: '#section-one',
           children: [
             {
               id: 'subsection-a',
               text: 'Subsection A',
               level: 3,
+              lineNumber: 5,
               anchor: '#subsection-a',
               children: []
             }
@@ -70,6 +73,7 @@ describe('TableOfContents', () => {
           id: 'section-two',
           text: 'Section Two',
           level: 2,
+          lineNumber: 8,
           anchor: '#section-two',
           children: []
         }
