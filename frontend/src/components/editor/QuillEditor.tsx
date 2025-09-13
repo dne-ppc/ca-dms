@@ -179,7 +179,7 @@ export const QuillEditor = ({
       return
     }
 
-    // TDD: Validate placeholder data before insertion
+    // TDD: Always validate placeholder data before insertion - empty data is invalid
     if (!signatureData.name && !signatureData.title && !signatureData.date) {
       setValidationError('Placeholder validation failed: signature field requires at least one field')
       return

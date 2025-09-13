@@ -12,6 +12,7 @@ export interface TOCHierarchyItem {
   id: string
   text: string
   level: number
+  lineNumber: number
   anchor: string
   children: TOCHierarchyItem[]
 }
@@ -75,6 +76,7 @@ class TOCService {
         id: header.id,
         text: header.text,
         level: header.level,
+        lineNumber: header.lineNumber,
         anchor: header.anchor,
         children: []
       }
