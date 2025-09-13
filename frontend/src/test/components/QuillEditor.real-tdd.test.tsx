@@ -132,7 +132,7 @@ describe('QuillEditor TDD - RED Phase (Expecting Failures)', () => {
     })
 
     it('should validate content changes and reject invalid deltas', async () => {
-      const mockOnChange = jest.fn()
+      const mockOnChange = vi.fn()
 
       render(
         <TestWrapper>
@@ -304,6 +304,9 @@ describe('QuillEditor TDD - RED Phase (Expecting Failures)', () => {
           }
         })
       }
+
+      // Wait for throttling to settle
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       // Should throttle or debounce onChange calls
       // This will fail because throttling isn't implemented

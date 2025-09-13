@@ -36,29 +36,41 @@ class WorkflowService:
     """Service layer for workflow operations"""
     
     def __init__(self, db: Session):
+        if db is None:
+            raise ValueError("Database session cannot be None")
         self.db = db
     
     # Workflow Definition Management
     def create_workflow(self, workflow_data: WorkflowCreate, created_by: str) -> Workflow:
         """Create a new workflow definition"""
-        # Create workflow
-        workflow = Workflow(
-            id=str(uuid.uuid4()),
-            name=workflow_data.name,
-            description=workflow_data.description,
-            document_type=workflow_data.document_type,
-            trigger_conditions=workflow_data.trigger_conditions,
-            status=workflow_data.status,
-            is_default=workflow_data.is_default,
-            created_by=created_by
-        )
-        
-        self.db.add(workflow)
-        self.db.flush()  # Get the workflow ID
-        
-        # Create workflow steps
-        for step_data in workflow_data.steps:
-            step = WorkflowStep(
+        # Validate workflow name
+        if not workflow_data.name or workflow_data.name.strip() == "":
+            raise ValueError("Workflow name cannot be empty")
+
+        # Check for duplicate name
+        existing = self.db.query(Workflow).filter(Workflow.name == workflow_data.name).first()
+        if existing:
+            raise ValueError("Workflow definition with this name already exists")
+
+        try:
+            # Create workflow
+            workflow = Workflow(
+                id=str(uuid.uuid4()),
+                name=workflow_data.name,
+                description=workflow_data.description,
+                document_type=workflow_data.document_type,
+                trigger_conditions=workflow_data.trigger_conditions,
+                status=workflow_data.status,
+                is_default=workflow_data.is_default,
+                created_by=created_by
+            )
+
+            self.db.add(workflow)
+            self.db.flush()  # Get the workflow ID
+
+            # Create workflow steps
+            for step_data in workflow_data.steps:
+                step = WorkflowStep(
                 id=str(uuid.uuid4()),
                 workflow_id=workflow.id,
                 name=step_data.name,
@@ -77,10 +89,13 @@ class WorkflowService:
                 form_fields=step_data.form_fields
             )
             self.db.add(step)
-        
-        self.db.commit()
-        self.db.refresh(workflow)
-        return workflow
+
+            self.db.commit()
+            self.db.refresh(workflow)
+            return workflow
+        except Exception as e:
+            self.db.rollback()
+            raise Exception(f"Failed to create workflow: {e}")
     
     def get_workflow(self, workflow_id: str) -> Optional[Workflow]:
         """Get a workflow by ID"""

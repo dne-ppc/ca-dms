@@ -216,12 +216,14 @@ class TestWorkflowServiceTDDFocused:
         )
         workflow_service.db.query.return_value.filter.return_value.first.return_value = mock_task
 
-        result = workflow_service.complete_task(
-            task_id="task-123",
-            user_id="user-123",
-            decision="approved",
+        # Create approval action
+        from app.schemas.workflow import ApprovalAction
+        action = ApprovalAction(
+            action="approve",
             comments="Looks good"
         )
+
+        result = workflow_service.process_approval("task-123", action, "user-123")
 
         # Should update task status and commit
         workflow_service.db.commit.assert_called()
@@ -259,7 +261,7 @@ class TestWorkflowServiceTDDFocused:
         ]
         workflow_service.db.query.return_value.all.return_value = mock_instances
 
-        stats = workflow_service.get_workflow_statistics()
+        stats = workflow_service.get_workflow_analytics()
 
         # Should return statistics object
         assert hasattr(stats, 'total_instances') or isinstance(stats, dict)
@@ -405,24 +407,23 @@ class TestWorkflowServiceTDDFocused:
 
     def test_workflow_configuration_validation(self, workflow_service):
         """Test workflow configuration validation"""
-        # Test invalid step order
-        invalid_workflow = WorkflowCreate(
-            name="Invalid Workflow",
-            description="Test",
-            document_type="policy",
-            steps=[
-                WorkflowStepCreate(
-                    name="Step 1",
-                    step_type=WorkflowStepType.APPROVAL,
-                    step_order=0,  # Invalid order (should be >= 1)
-                    required_role="manager"
-                )
-            ]
-        )
+        # Test that Pydantic validation is working (this should raise ValidationError)
+        from pydantic import ValidationError
 
-        # Should validate step order
-        with pytest.raises(Exception):
-            workflow_service.create_workflow(invalid_workflow, "user-123")
+        with pytest.raises(ValidationError):
+            invalid_workflow = WorkflowCreate(
+                name="Invalid Workflow",
+                description="Test",
+                document_type="policy",
+                steps=[
+                    WorkflowStepCreate(
+                        name="Step 1",
+                        step_type=WorkflowStepType.APPROVAL,
+                        step_order=0,  # Invalid order (should be >= 1)
+                        required_role="manager"
+                    )
+                ]
+            )
 
     def test_workflow_template_support(self, workflow_service):
         """Test workflow template functionality"""

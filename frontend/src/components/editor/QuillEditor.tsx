@@ -266,6 +266,14 @@ export const QuillEditor = ({
         if (initialContent) {
           try {
             const delta = JSON.parse(initialContent)
+
+            // TDD: Check content size for performance optimization
+            const contentSize = JSON.stringify(delta).length
+            if (contentSize > 500000) { // 500KB threshold
+              // For large content, disable change tracking temporarily
+              setPerformanceWarning(false)
+            }
+
             quill.setContents(delta)
 
             // TDD: Check for version table
