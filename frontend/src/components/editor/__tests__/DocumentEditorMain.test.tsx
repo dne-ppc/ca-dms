@@ -4,13 +4,13 @@ import { DocumentEditorMain } from '../DocumentEditorMain'
 
 // Mock child components
 vi.mock('../EnhancedToolbar', () => ({
-  EnhancedToolbar: ({ documentTitle, onTitleChange, ...props }: any) => (
+  EnhancedToolbar: ({ documentTitle, onTitleChange, isReadOnly, ...props }: any) => (
     <div data-testid="enhanced-toolbar" role="toolbar" aria-label="Document editing toolbar">
       <input
         data-testid="title-input"
         value={documentTitle}
         onChange={(e) => onTitleChange(e.target.value)}
-        disabled={props.isReadOnly || false}
+        disabled={isReadOnly || false}
       />
     </div>
   )
@@ -42,12 +42,15 @@ vi.mock('../EnhancedQuillEditor', () => ({
   )
 }))
 
+// Mock device detection with a default implementation
+const mockUseDeviceDetection = vi.fn(() => ({
+  isMobile: false,
+  isDesktop: true,
+  breakpoint: 'desktop'
+}))
+
 vi.mock('../../hooks/useDeviceDetection', () => ({
-  useDeviceDetection: () => ({
-    isMobile: false,
-    isDesktop: true,
-    breakpoint: 'desktop'
-  })
+  useDeviceDetection: mockUseDeviceDetection
 }))
 
 describe('DocumentEditorMain', () => {
@@ -244,27 +247,41 @@ describe('DocumentEditorMain', () => {
   })
 
   describe('Mobile Experience', () => {
-    let mockUseDeviceDetection: any
-
     beforeEach(() => {
-      mockUseDeviceDetection = vi.fn().mockReturnValue({
+      // Reset mock before each test
+      mockUseDeviceDetection.mockReset()
+    })
+
+    afterEach(() => {
+      // Reset to desktop default after each test
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: false,
+        isDesktop: true,
+        breakpoint: 'desktop'
+      })
+    })
+
+    it('should show mobile restriction message', () => {
+      // Set mobile mode for this test
+      mockUseDeviceDetection.mockReturnValue({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
       })
 
-      vi.doMock('../../hooks/useDeviceDetection', () => ({
-        useDeviceDetection: mockUseDeviceDetection
-      }))
-    })
-
-    it('should show mobile restriction message', () => {
       render(<DocumentEditorMain {...defaultProps} />)
 
       expect(screen.getByText(/Mobile editing is limited/)).toBeInTheDocument()
     })
 
     it('should disable editing controls on mobile', () => {
+      // Set mobile mode for this test
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: true,
+        isDesktop: false,
+        breakpoint: 'mobile'
+      })
+
       render(<DocumentEditorMain {...defaultProps} />)
 
       const editorContent = screen.getByTestId('editor-content')
@@ -272,6 +289,13 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should hide right panel by default on mobile', () => {
+      // Set mobile mode for this test
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: true,
+        isDesktop: false,
+        breakpoint: 'mobile'
+      })
+
       render(<DocumentEditorMain {...defaultProps} />)
 
       const rightPanel = screen.getByTestId('right-hand-panel')
@@ -279,6 +303,13 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should adapt toolbar for mobile', () => {
+      // Set mobile mode for this test
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: true,
+        isDesktop: false,
+        breakpoint: 'mobile'
+      })
+
       render(<DocumentEditorMain {...defaultProps} />)
 
       const toolbar = screen.getByTestId('enhanced-toolbar')

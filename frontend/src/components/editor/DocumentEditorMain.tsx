@@ -194,6 +194,7 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
           onRedo={handleRedo}
           isSaving={isSaving}
           hasUnsavedChanges={hasUnsavedChanges}
+          isReadOnly={true}
         />
 
         <div className="flex-1 p-4">
@@ -254,6 +255,7 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
         onRedo={handleRedo}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
+        isReadOnly={isReadOnly}
       />
 
       {/* Main Editor Area */}

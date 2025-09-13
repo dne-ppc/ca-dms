@@ -275,8 +275,10 @@ export const QuillEditor = ({
 
             // TDD: Check content size for performance optimization
             const contentSize = JSON.stringify(delta).length
-            if (contentSize > 500000) { // 500KB threshold
-              // For large content, disable change tracking temporarily
+            if (contentSize > 1000000) { // 1MB threshold - only warn for extremely large content
+              setPerformanceWarning(true)
+            } else {
+              // For manageable large content, ensure no performance warning shows
               setPerformanceWarning(false)
             }
 
@@ -288,7 +290,7 @@ export const QuillEditor = ({
               setHasVersionTable(true)
             }
           } catch (error) {
-            // TDD: Handle malformed content
+            // TDD: Handle malformed content - set specific error for content parsing
             setValidationError('Invalid content format, using plain text')
             quill.setText(initialContent)
           }
