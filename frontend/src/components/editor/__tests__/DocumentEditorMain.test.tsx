@@ -4,34 +4,39 @@ import { DocumentEditorMain } from '../DocumentEditorMain'
 
 // Mock child components
 vi.mock('../EnhancedToolbar', () => ({
-  EnhancedToolbar: ({ documentTitle, onTitleChange }: any) => (
+  EnhancedToolbar: ({ documentTitle, onTitleChange, ...props }: any) => (
     <div data-testid="enhanced-toolbar" role="toolbar" aria-label="Document editing toolbar">
       <input
         data-testid="title-input"
         value={documentTitle}
         onChange={(e) => onTitleChange(e.target.value)}
+        disabled={props.isReadOnly || false}
       />
     </div>
   )
 }))
 
 vi.mock('../RightHandPanel', () => ({
-  RightHandPanel: ({ document, onVersionSelect, collapsed }: any) => (
+  RightHandPanel: ({ document, onVersionSelect, collapsed, onCollapseChange }: any) => (
     <div data-testid="right-hand-panel" className={collapsed ? 'collapsed' : 'expanded'}>
-      <button onClick={() => onVersionSelect?.({ id: 'v1', title: 'Version 1' })}>
+      <button onClick={() => onVersionSelect?.({ id: 'v1', title: 'Version 1', content: 'New content' })}>
         Select Version
+      </button>
+      <button onClick={() => onCollapseChange?.(!collapsed)}>
+        Toggle Panel
       </button>
     </div>
   )
 }))
 
 vi.mock('../EnhancedQuillEditor', () => ({
-  EnhancedQuillEditor: ({ content, onChange }: any) => (
+  EnhancedQuillEditor: ({ content, onChange, readOnly }: any) => (
     <div data-testid="quill-editor">
       <textarea
         data-testid="editor-content"
         value={content}
         onChange={(e) => onChange(e.target.value)}
+        disabled={readOnly || false}
       />
     </div>
   )
@@ -221,11 +226,15 @@ describe('DocumentEditorMain', () => {
     })
 
     it('should auto-collapse panel on mobile', () => {
-      vi.mocked(require('../../hooks/useDeviceDetection').useDeviceDetection).mockReturnValue({
+      const mockUseDeviceDetection = vi.fn().mockReturnValue({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
       })
+
+      vi.doMock('../../hooks/useDeviceDetection', () => ({
+        useDeviceDetection: mockUseDeviceDetection
+      }))
 
       render(<DocumentEditorMain {...defaultProps} />)
 
@@ -235,12 +244,18 @@ describe('DocumentEditorMain', () => {
   })
 
   describe('Mobile Experience', () => {
+    let mockUseDeviceDetection: any
+
     beforeEach(() => {
-      vi.mocked(require('../../hooks/useDeviceDetection').useDeviceDetection).mockReturnValue({
+      mockUseDeviceDetection = vi.fn().mockReturnValue({
         isMobile: true,
         isDesktop: false,
         breakpoint: 'mobile'
       })
+
+      vi.doMock('../../hooks/useDeviceDetection', () => ({
+        useDeviceDetection: mockUseDeviceDetection
+      }))
     })
 
     it('should show mobile restriction message', () => {

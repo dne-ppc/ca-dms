@@ -50,17 +50,22 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(rightPanelCollapsed || isMobile)
 
   // Handle document title changes
-  const handleTitleChange = useCallback(async (title: string) => {
+  const handleTitleChange = useCallback((title: string) => {
     const updatedDocument = { ...document, title }
     setHasUnsavedChanges(true)
 
-    try {
-      setUpdateError(null)
-      await onDocumentUpdate(updatedDocument)
-    } catch (error) {
-      setUpdateError('Failed to save')
-      console.error('Document update failed:', error)
-    }
+    // Debounce the actual update call
+    const timeoutId = setTimeout(async () => {
+      try {
+        setUpdateError(null)
+        await onDocumentUpdate(updatedDocument)
+      } catch (error) {
+        setUpdateError('Failed to save')
+        console.error('Document update failed:', error)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
   }, [document, onDocumentUpdate])
 
   // Handle document type changes

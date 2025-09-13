@@ -71,24 +71,24 @@ class WorkflowService:
             # Create workflow steps
             for step_data in workflow_data.steps:
                 step = WorkflowStep(
-                id=str(uuid.uuid4()),
-                workflow_id=workflow.id,
-                name=step_data.name,
-                description=step_data.description,
-                step_type=step_data.step_type,
-                step_order=step_data.step_order,
-                required_role=step_data.required_role,
-                required_users=step_data.required_users,
-                required_approvals=step_data.required_approvals,
-                allow_delegation=step_data.allow_delegation,
-                is_parallel=step_data.is_parallel,
-                timeout_hours=step_data.timeout_hours,
-                escalation_users=step_data.escalation_users,
-                auto_approve_conditions=step_data.auto_approve_conditions,
-                instructions=step_data.instructions,
-                form_fields=step_data.form_fields
-            )
-            self.db.add(step)
+                    id=str(uuid.uuid4()),
+                    workflow_id=workflow.id,
+                    name=step_data.name,
+                    description=step_data.description,
+                    step_type=step_data.step_type,
+                    step_order=step_data.step_order,
+                    required_role=step_data.required_role,
+                    required_users=step_data.required_users,
+                    required_approvals=step_data.required_approvals,
+                    allow_delegation=step_data.allow_delegation,
+                    is_parallel=step_data.is_parallel,
+                    timeout_hours=step_data.timeout_hours,
+                    escalation_users=step_data.escalation_users,
+                    auto_approve_conditions=step_data.auto_approve_conditions,
+                    instructions=step_data.instructions,
+                    form_fields=step_data.form_fields
+                )
+                self.db.add(step)
 
             self.db.commit()
             self.db.refresh(workflow)

@@ -2,7 +2,7 @@
 API v1 router configuration
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import documents, auth, workflows, websockets, collaboration, presence, collaborative_placeholders, notifications, document_comparison, templates, workflow_conditions, security, api_enhancements, cache, assets, external_integrations, database, scaling
+from app.api.v1.endpoints import documents, auth, workflows, websockets, collaboration, presence, collaborative_placeholders, notifications, document_comparison, templates, workflow_conditions, security, api_enhancements, cache, assets, external_integrations, database, scaling, intro_page
 
 api_router = APIRouter()
 
@@ -59,3 +59,6 @@ api_router.include_router(database.router, prefix="/database", tags=["Database M
 
 # Include horizontal scaling routes
 api_router.include_router(scaling.router, prefix="/scaling", tags=["Horizontal Scaling"])
+
+# Include intro page routes
+api_router.include_router(intro_page.router, tags=["Intro Page"])
