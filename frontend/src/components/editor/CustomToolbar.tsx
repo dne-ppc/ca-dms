@@ -13,6 +13,8 @@ export const CustomToolbar = ({ onInsertPlaceholder }: CustomToolbarProps) => {
   const { registerToolbar } = useKeyboardNavigationContext()
 
   const handlePlaceholderClick = (type: PlaceholderType) => {
+    console.log('TDD Debug: CustomToolbar handlePlaceholderClick called with:', type)
+    console.log('TDD Debug: onInsertPlaceholder prop is:', onInsertPlaceholder)
     onInsertPlaceholder?.(type)
   }
 
