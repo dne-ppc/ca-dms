@@ -198,13 +198,19 @@ describe('QuillEditor TDD - RED Phase (Expecting Failures)', () => {
         expect(screen.getByTestId('quill-editor')).toBeInTheDocument()
       }, { timeout: 5000 })
 
+      // Wait for loading to complete
+      await waitFor(() => {
+        expect(screen.queryByTestId('quill-loading')).not.toBeInTheDocument()
+      }, { timeout: 2000 })
+
       // Try to insert invalid placeholder data
       const signatureButton = screen.getByTestId('insert-signature-field')
       await user.click(signatureButton)
 
-      // Should validate required fields
-      // This will fail because validation isn't implemented
-      expect(screen.getByTestId('placeholder-validation-error')).toBeInTheDocument()
+      // Should validate required fields and show error
+      await waitFor(() => {
+        expect(screen.getByTestId('placeholder-validation-error')).toBeInTheDocument()
+      }, { timeout: 2000 })
     })
 
     it('should handle placeholder insertion at invalid positions', async () => {

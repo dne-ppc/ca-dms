@@ -55,17 +55,71 @@ class TOTPService:
 
     @staticmethod
     def generate_qr_code_url(secret: str, user_email: str, issuer: str = "CA-DMS") -> str:
-        """Generate QR code URL for authenticator apps"""
-        return f"otpauth://totp/{issuer}:{user_email}?secret={secret}&issuer={issuer}"
+        """Generate QR code URL for authenticator apps with security validation"""
+        import urllib.parse
+        import re
+
+        # Validate inputs to prevent injection attacks
+        if not secret or not isinstance(secret, str):
+            raise ValueError("Secret must be a non-empty string")
+        if not user_email or not isinstance(user_email, str):
+            raise ValueError("User email must be a non-empty string")
+        if not issuer or not isinstance(issuer, str):
+            raise ValueError("Issuer must be a non-empty string")
+
+        # Validate email format to prevent injection
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, user_email):
+            raise ValueError("Invalid email format")
+
+        # Sanitize inputs by URL encoding to prevent XSS
+        safe_email = urllib.parse.quote(user_email, safe='@.')
+        safe_issuer = urllib.parse.quote(issuer, safe='')
+        safe_secret = urllib.parse.quote(secret, safe='')
+
+        # Additional security: block dangerous protocols
+        if any(proto in user_email.lower() for proto in ['javascript:', 'data:', 'vbscript:']):
+            raise ValueError("Invalid characters in email")
+        if any(proto in issuer.lower() for proto in ['javascript:', 'data:', 'vbscript:']):
+            raise ValueError("Invalid characters in issuer")
+
+        return f"otpauth://totp/{safe_issuer}:{safe_email}?secret={safe_secret}&issuer={safe_issuer}"
 
     @staticmethod
     def generate_backup_codes(count: int = 10) -> List[str]:
-        """Generate backup recovery codes"""
+        """Generate backup recovery codes with input validation"""
+        # Validate count parameter
+        if not isinstance(count, int) or count < 1 or count > 50:
+            raise ValueError("Count must be integer between 1 and 50")
+
         return [f"{secrets.randbelow(999999):06d}" for _ in range(count)]
 
     @staticmethod
     def verify_totp(secret: str, token: str, window: int = 1) -> bool:
-        """Verify TOTP token with time window tolerance"""
+        """Verify TOTP token with comprehensive input validation"""
+        # Validate token format
+        if not token or not isinstance(token, str):
+            raise ValueError("Token must be a non-empty string")
+
+        # Token must be exactly 6 digits
+        if not token.isdigit() or len(token) != 6:
+            raise ValueError("Token must be exactly 6 digits")
+
+        # Validate secret format
+        if not secret or not isinstance(secret, str):
+            raise ValueError("Secret must be a non-empty string")
+
+        try:
+            # Validate base32 secret format by attempting decode
+            base64.b32decode(secret)
+        except Exception:
+            raise ValueError("Invalid base32 secret format")
+
+        # Validate window parameter
+        if not isinstance(window, int) or window < 0 or window > 10:
+            raise ValueError("Window must be integer between 0 and 10")
+
+        # Proceed with verification using constant-time comparison
         current_time = int(time.time()) // 30
 
         for i in range(-window, window + 1):
@@ -78,9 +132,20 @@ class TOTPService:
 
     @staticmethod
     def _generate_token(secret: str, time_step: int) -> str:
-        """Generate TOTP token for given time step"""
-        # Decode base32 secret
-        key = base64.b32decode(secret)
+        """Generate TOTP token for given time step with input validation"""
+        # Validate secret format
+        if not secret or not isinstance(secret, str):
+            raise ValueError("Secret must be a non-empty string")
+
+        # Validate time_step parameter
+        if not isinstance(time_step, int) or time_step < 0:
+            raise ValueError("Time step must be a non-negative integer")
+
+        try:
+            # Decode base32 secret with validation
+            key = base64.b32decode(secret)
+        except Exception:
+            raise ValueError("Invalid base32 secret format")
 
         # Convert time step to bytes
         msg = time_step.to_bytes(8, byteorder='big')

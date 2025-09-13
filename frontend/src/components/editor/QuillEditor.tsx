@@ -85,14 +85,19 @@ export const QuillEditor = ({
   const [changeCount, setChangeCount] = useState(0)
 
   const handlePlaceholderInsertion = (type: string) => {
+    console.log('TDD Debug: handlePlaceholderInsertion called with type:', type)
     const quill = quillRef.current
-    if (!quill) return
+    if (!quill) {
+      console.log('TDD Debug: No quill instance available')
+      return
+    }
 
     switch (type) {
       case 'version-table':
         insertVersionTable(quill)
         break
       case 'signature-field':
+        console.log('TDD Debug: Calling insertSignatureField')
         insertSignatureField(quill)
         break
       case 'long-response':
@@ -180,10 +185,13 @@ export const QuillEditor = ({
     }
 
     // TDD: Always validate placeholder data before insertion - empty data is invalid
+    console.log('TDD Debug: Checking signature data:', signatureData)
     if (!signatureData.name && !signatureData.title && !signatureData.date) {
+      console.log('TDD Debug: Signature validation failed - setting error')
       setValidationError('Placeholder validation failed: signature field requires at least one field')
       return
     }
+    console.log('TDD Debug: Signature validation passed')
 
     // Insert at current cursor position
     try {

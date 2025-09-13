@@ -394,3 +394,14 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/api/v1/health")
+def api_health_check():
+    """API v1 health check endpoint for testing infrastructure"""
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "timestamp": "2025-09-13T10:45:23.123Z",
+        "api_version": "v1"
+    }
