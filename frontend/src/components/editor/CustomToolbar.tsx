@@ -32,7 +32,7 @@ export const CustomToolbar = ({ onInsertPlaceholder }: CustomToolbarProps) => {
       role="toolbar"
       aria-label="Text formatting toolbar"
       aria-describedby="toolbar-help"
-      tabIndex={-1}
+      tabIndex={0}
     >
       {/* Standard Quill formatting tools */}
       <span className="ql-formats" role="group" aria-label="Text styles">
@@ -66,10 +66,10 @@ export const CustomToolbar = ({ onInsertPlaceholder }: CustomToolbarProps) => {
       </span>
       
       <span className="ql-formats" role="group" aria-label="Text formatting">
-        <button className="ql-bold" aria-label="Bold (Ctrl+B)" title="Bold" />
-        <button className="ql-italic" aria-label="Italic (Ctrl+I)" title="Italic" />
-        <button className="ql-underline" aria-label="Underline (Ctrl+U)" title="Underline" />
-        <button className="ql-strike" aria-label="Strikethrough" title="Strikethrough" />
+        <button className="ql-bold" data-testid="toolbar-button-bold" aria-label="Bold (Ctrl+B)" title="Bold" />
+        <button className="ql-italic" data-testid="toolbar-button-italic" aria-label="Italic (Ctrl+I)" title="Italic" />
+        <button className="ql-underline" data-testid="toolbar-button-underline" aria-label="Underline (Ctrl+U)" title="Underline" />
+        <button className="ql-strike" data-testid="toolbar-button-strike" aria-label="Strikethrough" title="Strikethrough" />
       </span>
 
       <span className="ql-formats" role="group" aria-label="Script formatting">

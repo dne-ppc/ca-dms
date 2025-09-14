@@ -1,5 +1,5 @@
-import { PlaceholderConfig } from './blots/DraggablePlaceholderBlot';
-import { SignatureConfig } from './blots/EnhancedSignatureBlot';
+import type { PlaceholderConfig } from './blots/DraggablePlaceholderBlot';
+import type { SignatureConfig } from './blots/EnhancedSignatureBlot';
 
 export interface PlaceholderTemplate {
   id: string;

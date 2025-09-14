@@ -1,7 +1,14 @@
 import Quill from 'quill'
 import './SignatureBlot.css'
 
-const Block = Quill.import('blots/block')
+// Safe import Block to avoid module-level execution issues
+let Block: any;
+try {
+  Block = Quill.import('blots/block');
+} catch (error) {
+  console.warn('Quill block import failed, using fallback', error);
+  Block = class extends HTMLElement {}; // Fallback class
+}
 
 export interface SignatureData {
   name: string

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { DocumentEditorMain, Document, User } from '../components/editor/DocumentEditorMain'
+import { DocumentEditorMain } from '../components/editor/DocumentEditorMain'
+import type { Document, User } from '../components/editor/DocumentEditorMain'
 
 const DocumentEditor = () => {
   const { id } = useParams<{ id: string }>()

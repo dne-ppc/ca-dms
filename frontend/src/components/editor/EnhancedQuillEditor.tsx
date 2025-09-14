@@ -3,14 +3,16 @@ import Quill from 'quill';
 import { Plus, Settings, Download, Upload, Save } from 'lucide-react';
 
 // Import custom blots
-import { DraggablePlaceholderBlot, PlaceholderConfig } from './blots/DraggablePlaceholderBlot';
+import { DraggablePlaceholderBlot } from './blots/DraggablePlaceholderBlot';
+import type { PlaceholderConfig } from './blots/DraggablePlaceholderBlot';
 import { EnhancedSignatureBlot } from './blots/EnhancedSignatureBlot';
 import { EnhancedResponseBlot } from './blots/EnhancedResponseBlot';
 import { EnhancedLineBlot } from './blots/EnhancedLineBlot';
 
 // Import components
 import { PlaceholderConfigPanel } from './PlaceholderConfigPanel';
-import { PlaceholderTemplate, PlaceholderTemplateManager } from './PlaceholderTemplates';
+import { PlaceholderTemplateManager } from './PlaceholderTemplates';
+import type { PlaceholderTemplate } from './PlaceholderTemplates';
 
 // Import styles
 import 'quill/dist/quill.snow.css';
@@ -20,6 +22,7 @@ interface EnhancedQuillEditorProps {
   value?: string;
   onChange?: (value: string) => void;
   onPlaceholderChange?: (placeholders: PlaceholderData[]) => void;
+  onEditorReady?: (editor: any) => void;
   height?: string;
   readOnly?: boolean;
   theme?: 'snow' | 'bubble';
@@ -38,6 +41,7 @@ export const EnhancedQuillEditor: React.FC<EnhancedQuillEditorProps> = ({
   value = '',
   onChange,
   onPlaceholderChange,
+  onEditorReady,
   height = '400px',
   readOnly = false,
   theme = 'snow',
@@ -66,19 +70,7 @@ export const EnhancedQuillEditor: React.FC<EnhancedQuillEditorProps> = ({
       readOnly,
       placeholder,
       modules: {
-        toolbar: {
-          container: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'align': [] }],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            ['blockquote', 'code-block'],
-            ['link', 'image'],
-            ['clean'],
-            ['placeholder-menu'] // Custom placeholder button
-          ]
-        },
+        toolbar: false, // Disable Quill's built-in toolbar since we use our own EnhancedToolbar
         history: {
           delay: 2000,
           maxStack: 500,
@@ -95,9 +87,6 @@ export const EnhancedQuillEditor: React.FC<EnhancedQuillEditorProps> = ({
 
     quillRef.current = quill;
 
-    // Add custom placeholder menu to toolbar
-    setupCustomToolbar(quill);
-
     // Set initial content
     if (value) {
       quill.setContents(JSON.parse(value));
@@ -106,12 +95,17 @@ export const EnhancedQuillEditor: React.FC<EnhancedQuillEditorProps> = ({
     // Setup event listeners
     setupEventListeners(quill);
 
+    // Notify parent component that editor is ready
+    if (onEditorReady) {
+      onEditorReady(quill);
+    }
+
     return () => {
       if (quillRef.current) {
         quillRef.current = null;
       }
     };
-  }, []);
+  }, [onEditorReady]);
 
   // Update content when value prop changes
   useEffect(() => {

@@ -31,6 +31,7 @@ export const DocumentTypeSelector: React.FC<DocumentTypeSelectorProps> = ({
         data-testid="document-type-selector"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label="Document type"
         className={`
           appearance-none
           bg-white

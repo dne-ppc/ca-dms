@@ -1,7 +1,14 @@
 import Quill from 'quill'
 import './LineSegmentBlot.css'
 
-const Inline = Quill.import('blots/inline')
+// Safe import Inline to avoid module-level execution issues
+let Inline: any;
+try {
+  Inline = Quill.import('blots/inline');
+} catch (error) {
+  console.warn('Quill inline import failed, using fallback', error);
+  Inline = class extends HTMLElement {}; // Fallback class
+}
 
 export interface LineSegmentData {
   length?: 'short' | 'medium' | 'long'

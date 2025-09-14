@@ -2,6 +2,15 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { EnhancedToolbar } from './EnhancedToolbar'
 import { EnhancedQuillEditor } from './EnhancedQuillEditor'
 import { RightHandPanel } from './RightHandPanel'
+import { AutoSave, useAutoSave } from './AutoSave'
+import { DocumentStats, useDocumentStats } from './DocumentStats'
+import { CommandPalette, useCommandPalette, createDefaultEditorCommands } from './CommandPalette'
+import { DocumentTemplateSelector, useDocumentTemplateSelector } from './DocumentTemplateSelector'
+import { DocumentTemplateManager } from './DocumentTemplateManager'
+import type { DocumentTemplate } from './DocumentTemplateManager'
+import { FormatControls } from './FormatControls'
+import { markdownService } from '../../services/markdownService'
+import type { HeaderFormat } from '../../services/markdownService'
 import { useDeviceDetection } from '../../hooks/useDeviceDetection'
 import './DocumentEditorMain.css'
 
@@ -48,9 +57,23 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [headerFormat, setHeaderFormat] = useState('normal')
   const [isCollapsed, setIsCollapsed] = useState(rightPanelCollapsed || isMobile)
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
+  const [showStats, setShowStats] = useState(false)
 
   // Ref for debouncing timeout
   const titleDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Ref for Quill editor instance
+  const quillEditorRef = useRef<any>(null)
+
+  // Advanced editor hooks
+  const documentStats = useDocumentStats(document.content)
+  const commandPalette = useCommandPalette()
+  const templateSelector = useDocumentTemplateSelector()
+  const autoSave = useAutoSave(document, onSave, {
+    enabled: autoSaveEnabled && !isReadOnly,
+    intervalSeconds: 30
+  })
 
   // Handle document title changes
   const handleTitleChange = useCallback((title: string) => {
@@ -80,6 +103,51 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
     setHasUnsavedChanges(true)
     onDocumentUpdate(updatedDocument)
   }, [document, onDocumentUpdate])
+
+  // Handle header format changes with markdown integration
+  const handleHeaderFormatChange = useCallback((format: string) => {
+    setHeaderFormat(format)
+
+    // Apply markdown formatting if editor is available
+    if (quillEditorRef.current && format) {
+      const editor = quillEditorRef.current
+      const selection = editor.getSelection()
+
+      if (selection) {
+        try {
+          // Get current line
+          const [line, offset] = editor.getLine(selection.index)
+          if (line && line.domNode) {
+            const lineText = line.domNode.textContent || ''
+            const lineStart = offset
+            const lineLength = lineText.length
+
+            // Parse current line to extract content without markdown
+            const parsed = markdownService.parseMarkdown(lineText)
+
+            // Generate new markdown text
+            const newText = markdownService.convertToMarkdown(parsed.text, format as HeaderFormat)
+
+            // Replace the entire line
+            if (lineLength > 0) {
+              editor.deleteText(lineStart, lineLength)
+            }
+            editor.insertText(lineStart, newText)
+
+            // Set cursor position at end of line
+            editor.setSelection(lineStart + newText.length)
+          }
+        } catch (error) {
+          console.debug('Header format application error:', error)
+        }
+      }
+    }
+  }, [])
+
+  // Handle editor instance reference
+  const handleEditorReady = useCallback((editorInstance: any) => {
+    quillEditorRef.current = editorInstance
+  }, [])
 
   // Handle content changes
   const handleContentChange = useCallback(async (content: string) => {
@@ -117,23 +185,81 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
 
   // Formatting handlers
   const handleBold = useCallback(() => {
-    // Bold formatting would be handled by the Quill editor
+    if (quillEditorRef.current) {
+      const format = quillEditorRef.current.getFormat()
+      quillEditorRef.current.format('bold', !format.bold)
+    }
   }, [])
 
   const handleItalic = useCallback(() => {
-    // Italic formatting would be handled by the Quill editor
+    if (quillEditorRef.current) {
+      const format = quillEditorRef.current.getFormat()
+      quillEditorRef.current.format('italic', !format.italic)
+    }
   }, [])
 
   const handleUnderline = useCallback(() => {
-    // Underline formatting would be handled by the Quill editor
+    if (quillEditorRef.current) {
+      const format = quillEditorRef.current.getFormat()
+      quillEditorRef.current.format('underline', !format.underline)
+    }
   }, [])
 
   const handleUndo = useCallback(() => {
-    // Undo would be handled by the Quill editor
+    if (quillEditorRef.current) {
+      quillEditorRef.current.history.undo()
+    }
   }, [])
 
   const handleRedo = useCallback(() => {
-    // Redo would be handled by the Quill editor
+    if (quillEditorRef.current) {
+      quillEditorRef.current.history.redo()
+    }
+  }, [])
+
+  const handleStrikethrough = useCallback(() => {
+    if (quillEditorRef.current) {
+      const format = quillEditorRef.current.getFormat()
+      quillEditorRef.current.format('strike', !format.strike)
+    }
+  }, [])
+
+  const handleBulletList = useCallback(() => {
+    if (quillEditorRef.current) {
+      const format = quillEditorRef.current.getFormat()
+      quillEditorRef.current.format('list', format.list === 'bullet' ? false : 'bullet')
+    }
+  }, [])
+
+  const handleNumberedList = useCallback(() => {
+    if (quillEditorRef.current) {
+      const format = quillEditorRef.current.getFormat()
+      quillEditorRef.current.format('list', format.list === 'ordered' ? false : 'ordered')
+    }
+  }, [])
+
+  const handleAlignLeft = useCallback(() => {
+    if (quillEditorRef.current) {
+      quillEditorRef.current.format('align', 'left')
+    }
+  }, [])
+
+  const handleAlignCenter = useCallback(() => {
+    if (quillEditorRef.current) {
+      quillEditorRef.current.format('align', 'center')
+    }
+  }, [])
+
+  const handleAlignRight = useCallback(() => {
+    if (quillEditorRef.current) {
+      quillEditorRef.current.format('align', 'right')
+    }
+  }, [])
+
+  const handleAlignJustify = useCallback(() => {
+    if (quillEditorRef.current) {
+      quillEditorRef.current.format('align', 'justify')
+    }
   }, [])
 
   const handleRequestSignature = useCallback(async (participants: any[]) => {
@@ -156,11 +282,100 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
     }
   }, [document.id])
 
+  // Handle template selection
+  const handleTemplateSelect = useCallback((template: DocumentTemplate) => {
+    const updatedDocument = {
+      ...document,
+      title: template.name,
+      content: JSON.stringify(template.content),
+      type: template.category
+    }
+
+    onDocumentUpdate(updatedDocument)
+    setHasUnsavedChanges(true)
+
+    // Increment template popularity
+    DocumentTemplateManager.incrementPopularity(template.id)
+  }, [document, onDocumentUpdate])
+
+  // Create command palette commands
+  const commandPaletteCommands = [
+    ...createDefaultEditorCommands({
+      onSave: handleSave,
+      onUndo: handleUndo,
+      onRedo: handleRedo,
+      onBold: handleBold,
+      onItalic: handleItalic,
+      onUnderline: handleUnderline,
+      onRequestSignature: isReadOnly ? undefined : () => {
+        // This would trigger the signature request modal
+        console.log('Open signature request modal')
+      },
+      onDownloadPDF: () => {
+        // This would trigger PDF download
+        console.log('Download PDF')
+      }
+    }),
+    // Template commands
+    {
+      id: 'template-selector',
+      label: 'Browse Document Templates',
+      description: 'Choose from pre-built document templates',
+      shortcut: 'Ctrl+T',
+      category: 'document' as const,
+      action: () => templateSelector.open(),
+      enabled: !isReadOnly
+    },
+    {
+      id: 'template-board-resolution',
+      label: 'New Board Resolution',
+      description: 'Create a new board resolution from template',
+      category: 'insert' as const,
+      action: () => {
+        const template = DocumentTemplateManager.getTemplateById('board-resolution')
+        if (template) handleTemplateSelect(template)
+      },
+      enabled: !isReadOnly
+    },
+    {
+      id: 'template-meeting-minutes',
+      label: 'New Meeting Minutes',
+      description: 'Create meeting minutes from template',
+      category: 'insert' as const,
+      action: () => {
+        const template = DocumentTemplateManager.getTemplateById('meeting-minutes')
+        if (template) handleTemplateSelect(template)
+      },
+      enabled: !isReadOnly
+    },
+    {
+      id: 'template-memo',
+      label: 'New Business Memo',
+      description: 'Create a business memorandum from template',
+      category: 'insert' as const,
+      action: () => {
+        const template = DocumentTemplateManager.getTemplateById('memo-template')
+        if (template) handleTemplateSelect(template)
+      },
+      enabled: !isReadOnly
+    }
+  ]
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey) {
         switch (event.key.toLowerCase()) {
+          case 'k':
+            event.preventDefault()
+            commandPalette.open()
+            break
+          case 't':
+            event.preventDefault()
+            if (!isReadOnly) {
+              templateSelector.open()
+            }
+            break
           case 's':
             event.preventDefault()
             handleSave()
@@ -175,18 +390,26 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
             event.preventDefault()
             handleRedo()
             break
+          case '\\':
+            event.preventDefault()
+            setShowStats(!showStats)
+            break
         }
       }
 
       if (event.key === 'Escape') {
         // Close panels or dialogs
-        setIsCollapsed(true)
+        if (commandPalette.isOpen) {
+          commandPalette.close()
+        } else {
+          setIsCollapsed(true)
+        }
       }
     }
 
     globalThis.document?.addEventListener('keydown', handleKeyDown)
     return () => globalThis.document?.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave, handleUndo, handleRedo])
+  }, [handleSave, handleUndo, handleRedo, commandPalette, showStats])
 
   // Auto-collapse panel on mobile
   useEffect(() => {
@@ -209,51 +432,10 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
     }
   }, [])
 
-  // Mobile restriction message
-  if (isMobile) {
-    return (
-      <div className="document-editor-main flex flex-col h-full">
-        <div className="p-4 bg-yellow-50 border-b border-yellow-200">
-          <p className="text-yellow-800 text-sm">
-            Mobile editing is limited. Please use a desktop for full editing capabilities.
-          </p>
-        </div>
-
-        <EnhancedToolbar
-          documentTitle={document.title}
-          documentType={document.type}
-          headerFormat={headerFormat}
-          documentId={document.id}
-          onTitleChange={handleTitleChange}
-          onTypeChange={handleTypeChange}
-          onHeaderFormatChange={setHeaderFormat}
-          onSave={handleSave}
-          onBold={handleBold}
-          onItalic={handleItalic}
-          onUnderline={handleUnderline}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onRequestSignature={handleRequestSignature}
-          isSaving={isSaving}
-          hasUnsavedChanges={hasUnsavedChanges}
-        />
-
-        <div className="flex-1 p-4">
-          <EnhancedQuillEditor
-            content={document.content}
-            onChange={handleContentChange}
-            readOnly={true}
-          />
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <main
-      role="main"
-      aria-label="Document editor"
-      className="document-editor-main flex flex-col h-full"
+    <div
+      className="google-docs-layout"
+
     >
       {/* Status Region for Screen Readers */}
       <div role="status" aria-live="polite" className="sr-only">
@@ -280,45 +462,83 @@ export const DocumentEditorMain: React.FC<DocumentEditorMainProps> = ({
         </div>
       )}
 
-      {/* Enhanced Toolbar */}
+      {/* Google Docs style header toolbar */}
       <EnhancedToolbar
         documentTitle={document.title}
         documentType={document.type}
         headerFormat={headerFormat}
         documentId={document.id}
-        onTitleChange={isReadOnly ? () => {} : handleTitleChange}
-        onTypeChange={isReadOnly ? () => {} : handleTypeChange}
-        onHeaderFormatChange={setHeaderFormat}
+        onTitleChange={isReadOnly ? () => { } : handleTitleChange}
+        onTypeChange={isReadOnly ? () => { } : handleTypeChange}
+        onHeaderFormatChange={isReadOnly ? () => { } : handleHeaderFormatChange}
         onSave={handleSave}
         onBold={handleBold}
         onItalic={handleItalic}
         onUnderline={handleUnderline}
+        onStrikethrough={handleStrikethrough}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onBulletList={handleBulletList}
+        onNumberedList={handleNumberedList}
+        onAlignLeft={handleAlignLeft}
+        onAlignCenter={handleAlignCenter}
+        onAlignRight={handleAlignRight}
+        onAlignJustify={handleAlignJustify}
         onRequestSignature={isReadOnly ? undefined : handleRequestSignature}
+        onOpenTemplates={isReadOnly ? undefined : templateSelector.open}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
       />
 
-      {/* Main Editor Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Editor Content */}
-        <div className="flex-1 flex flex-col">
+      {/* Main content area like Google Docs */}
+      <main
+        role="main"
+        aria-label="Document editor"
+        className="google-docs-main"
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          backgroundColor: '#f9fbfd',
+          minHeight: 'calc(100vh - 120px)',
+          padding: '20px 0'
+        }}
+      >
+        {/* <div
+          className="document-container"
+          style={{
+            width: isMobile ? '100%' : '8.5in',
+            maxWidth: isMobile ? '100%' : '8.5in',
+            minHeight: '11in',
+            backgroundColor: 'white',
+            boxShadow: isMobile ? 'none' : '0 1px 3px 0 rgba(60,64,67,.15), 0 4px 8px 3px rgba(60,64,67,.1)',
+            borderRadius: isMobile ? '0' : '8px',
+            margin: '0 auto',
+            padding: isMobile ? '0.5in' : '1in',
+            position: 'relative'
+          }}
+        > */}
           <EnhancedQuillEditor
-            content={document.content}
-            onChange={isReadOnly ? () => {} : handleContentChange}
+            value={document.content}
+            onChange={isReadOnly ? () => { } : handleContentChange}
+            onEditorReady={handleEditorReady}
             readOnly={isReadOnly}
           />
-        </div>
+        {/* </div> */}
+      </main>
 
-        {/* Right Hand Panel */}
-        <RightHandPanel
-          document={document}
-          onVersionSelect={handleVersionSelect}
-          collapsed={isCollapsed}
-          onCollapseChange={setIsCollapsed}
-        />
-      </div>
-    </main>
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={commandPalette.isOpen}
+        onClose={commandPalette.close}
+        commands={commandPaletteCommands}
+      />
+
+      {/* Document Template Selector */}
+      <DocumentTemplateSelector
+        isOpen={templateSelector.isOpen}
+        onClose={templateSelector.close}
+        onTemplateSelect={handleTemplateSelect}
+      />
+    </div>
   )
 }

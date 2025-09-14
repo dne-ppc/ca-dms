@@ -1,143 +1,182 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { vi } from 'vitest'
+import { BrowserRouter } from 'react-router-dom'
 import { EnhancedEditorLayout } from '../EnhancedEditorLayout'
-import * as useDeviceDetectionModule from '../../../hooks/useDeviceDetection'
+import { useDeviceDetection } from '../../../hooks/useDeviceDetection'
 
-// Mock the useDeviceDetection hook
+// Mock the device detection hook
 vi.mock('../../../hooks/useDeviceDetection', () => ({
   useDeviceDetection: vi.fn()
 }))
 
-// Mock child components that might not exist yet
-vi.mock('../EnhancedToolbar', () => ({
-  EnhancedToolbar: () => <div data-testid="enhanced-toolbar">Enhanced Toolbar</div>
+// Mock components
+vi.mock('../EnhancedQuillEditor', () => ({
+  EnhancedQuillEditor: () => <div data-testid="quill-editor">Enhanced Quill Editor</div>
 }))
 
-vi.mock('../MobileEditor', () => ({
-  MobileEditor: () => <div data-testid="mobile-editor">Mobile Editor</div>
-}))
+interface MockProps {
+  documentId?: string
+  value?: string
+  onChange?: (value: string) => void
+  readOnly?: boolean
+}
 
-vi.mock('../DocumentEditor', () => ({
-  DocumentEditor: () => <div data-testid="document-editor">Document Editor</div>
-}))
+const mockProps: MockProps = {
+  documentId: 'test-doc-123',
+  value: 'Test document content',
+  onChange: vi.fn(),
+  readOnly: false
+}
 
-describe('EnhancedEditorLayout', () => {
-  const mockUseDeviceDetection = vi.mocked(useDeviceDetectionModule.useDeviceDetection)
+const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+  <BrowserRouter>{children}</BrowserRouter>
+)
 
+describe('EnhancedEditorLayout - Task 1.2.1-1.2.2: TDD Green Phase', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('should render mobile layout for mobile devices', () => {
-    mockUseDeviceDetection.mockReturnValue({
-      isMobile: true,
-      isDesktop: false,
-      breakpoint: 'sm',
-      windowWidth: 480,
-      isBreakpointUp: vi.fn(),
-      isBreakpointDown: vi.fn()
-    })
-
-    render(<EnhancedEditorLayout />)
-
-    // Should show mobile editor
-    expect(screen.getByTestId('mobile-editor')).toBeInTheDocument()
-
-    // Should NOT show desktop components
-    expect(screen.queryByTestId('enhanced-toolbar')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('document-editor')).not.toBeInTheDocument()
-  })
-
-  it('should render desktop layout for desktop devices', () => {
+    // Default to desktop device
+    const mockUseDeviceDetection = vi.mocked(useDeviceDetection)
     mockUseDeviceDetection.mockReturnValue({
       isMobile: false,
       isDesktop: true,
+      deviceType: 'desktop',
+      isTouchDevice: false,
       breakpoint: 'lg',
       windowWidth: 1024,
-      isBreakpointUp: vi.fn(),
-      isBreakpointDown: vi.fn()
+      isBreakpointUp: vi.fn(() => true),
+      isBreakpointDown: vi.fn(() => false)
     })
-
-    render(<EnhancedEditorLayout />)
-
-    // Should show desktop components
-    expect(screen.getByTestId('enhanced-toolbar')).toBeInTheDocument()
-    expect(screen.getByTestId('document-editor')).toBeInTheDocument()
-
-    // Should NOT show mobile editor
-    expect(screen.queryByTestId('mobile-editor')).not.toBeInTheDocument()
   })
 
-  it('should show mobile restriction message for mobile devices', () => {
-    mockUseDeviceDetection.mockReturnValue({
-      isMobile: true,
-      isDesktop: false,
-      breakpoint: 'sm',
-      windowWidth: 480,
-      isBreakpointUp: vi.fn(),
-      isBreakpointDown: vi.fn()
+  describe('TDD Green Phase - Component functionality', () => {
+    it('should render EnhancedEditorLayout component successfully', () => {
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
+
+      expect(screen.getByTestId('enhanced-editor-layout')).toBeInTheDocument()
     })
 
-    render(<EnhancedEditorLayout />)
+    it('should render mobile layout for mobile devices', () => {
+      const mockUseDeviceDetection = vi.mocked(useDeviceDetection)
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: true,
+        isDesktop: false,
+        deviceType: 'mobile',
+        isTouchDevice: true,
+        breakpoint: 'xs',
+        windowWidth: 375,
+        isBreakpointUp: vi.fn(() => false),
+        isBreakpointDown: vi.fn(() => true)
+      })
 
-    // Should show restriction message
-    expect(screen.getByText(/document editing is limited on mobile devices/i)).toBeInTheDocument()
-    expect(screen.getByText(/please use a desktop/i)).toBeInTheDocument()
-  })
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
 
-  it('should have proper CSS classes for responsive layout', () => {
-    mockUseDeviceDetection.mockReturnValue({
-      isMobile: false,
-      isDesktop: true,
-      breakpoint: 'lg',
-      windowWidth: 1024,
-      isBreakpointUp: vi.fn(),
-      isBreakpointDown: vi.fn()
+      expect(screen.getByTestId('mobile-editor-layout')).toBeInTheDocument()
     })
 
-    const { container } = render(<EnhancedEditorLayout />)
+    it('should render desktop layout for desktop devices', () => {
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
 
-    // Should have main layout container class
-    expect(container.firstChild).toHaveClass('enhanced-editor-layout')
-
-    // Should have desktop-specific classes
-    expect(container.querySelector('.desktop-layout')).toBeInTheDocument()
-  })
-
-  it('should have proper CSS classes for mobile layout', () => {
-    mockUseDeviceDetection.mockReturnValue({
-      isMobile: true,
-      isDesktop: false,
-      breakpoint: 'sm',
-      windowWidth: 480,
-      isBreakpointUp: vi.fn(),
-      isBreakpointDown: vi.fn()
+      expect(screen.getByTestId('enhanced-editor-layout')).toBeInTheDocument()
+      expect(screen.getByTestId('enhanced-editor-layout')).toHaveClass('desktop-layout')
     })
 
-    const { container } = render(<EnhancedEditorLayout />)
+    it('should show mobile restriction message', () => {
+      const mockUseDeviceDetection = vi.mocked(useDeviceDetection)
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: true,
+        isDesktop: false,
+        deviceType: 'mobile',
+        isTouchDevice: true,
+        breakpoint: 'xs',
+        windowWidth: 375,
+        isBreakpointUp: vi.fn(() => false),
+        isBreakpointDown: vi.fn(() => true)
+      })
 
-    // Should have main layout container class
-    expect(container.firstChild).toHaveClass('enhanced-editor-layout')
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
 
-    // Should have mobile-specific classes
-    expect(container.querySelector('.mobile-layout')).toBeInTheDocument()
-  })
-
-  it('should render with proper accessibility attributes', () => {
-    mockUseDeviceDetection.mockReturnValue({
-      isMobile: false,
-      isDesktop: true,
-      breakpoint: 'lg',
-      windowWidth: 1024,
-      isBreakpointUp: vi.fn(),
-      isBreakpointDown: vi.fn()
+      expect(screen.getByText(/mobile editing is limited/i)).toBeInTheDocument()
     })
 
-    render(<EnhancedEditorLayout />)
+    it('should handle device-aware rendering', () => {
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
 
-    // Should have proper ARIA role
-    const layout = screen.getByRole('main')
-    expect(layout).toBeInTheDocument()
-    expect(layout).toHaveAttribute('aria-label', 'Document editor')
+      expect(screen.getByTestId('enhanced-editor-layout')).toHaveClass('desktop-layout')
+    })
+
+    it('should handle responsive design', () => {
+      const mockUseDeviceDetection = vi.mocked(useDeviceDetection)
+      mockUseDeviceDetection.mockReturnValue({
+        isMobile: false,
+        isDesktop: true,
+        deviceType: 'tablet',
+        isTouchDevice: true,
+        breakpoint: 'md',
+        windowWidth: 768,
+        isBreakpointUp: vi.fn(() => true),
+        isBreakpointDown: vi.fn(() => false)
+      })
+
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
+
+      expect(screen.getByTestId('enhanced-editor-layout')).toHaveClass('tablet-layout')
+    })
+
+    it('should integrate with enhanced Quill editor', () => {
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
+
+      expect(screen.getByTestId('quill-editor')).toBeInTheDocument()
+    })
+
+    it('should handle read-only mode correctly', () => {
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} readOnly={true} />
+        </TestWrapper>
+      )
+
+      expect(screen.getByTestId('enhanced-editor-layout')).toHaveClass('read-only')
+    })
+
+    it('should provide proper error boundaries', () => {
+      render(
+        <TestWrapper>
+          <EnhancedEditorLayout {...mockProps} />
+        </TestWrapper>
+      )
+
+      expect(screen.getByTestId('editor-error-boundary')).toBeInTheDocument()
+    })
   })
 })
+
+// These tests should ALL FAIL initially, driving the implementation

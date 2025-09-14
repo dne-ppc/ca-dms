@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { tocService, TOCHeader } from '../../services/tocService'
+import { tocService } from '../../services/tocService'
+import type { TOCHeader } from '../../services/tocService'
 import { VersionHistory } from './VersionHistory'
-import { DocumentVersion } from '../../services/versionService'
+import type { DocumentVersion } from '../../services/versionService'
 
 export interface Document {
   id: string

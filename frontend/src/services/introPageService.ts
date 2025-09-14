@@ -212,6 +212,15 @@ class IntroPageService {
       throw new Error('User ID is required')
     }
 
+    // Development mode: Return mock data
+    const isDevelopment = (typeof import.meta !== 'undefined' && import.meta.env?.DEV) ||
+                         (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
+
+    if (isDevelopment) {
+      console.log('🚀 Development mode: Returning mock intro page data')
+      return this.getMockIntroPageData(userId)
+    }
+
     const headers: Record<string, string> = {
       ...getAuthHeaders()
     }
@@ -228,6 +237,101 @@ class IntroPageService {
       const validatedData = validateIntroPageResponse(response)
       return transformIntroPageData(validatedData)
     })
+  }
+
+  /**
+   * Get mock intro page data for development
+   */
+  private getMockIntroPageData(userId: string): Promise<TransformedIntroPageData> {
+    const mockData: TransformedIntroPageData = {
+      systemOverview: {
+        total_users: 150,
+        active_documents: 1250,
+        documents_today: 8,
+        documents_this_week: 45,
+        system_health_score: 98.5,
+        storage_usage: {
+          used_gb: 45.2,
+          total_gb: 100,
+          percentage: 45.2
+        },
+        performance_metrics: {
+          avg_response_time: 120,
+          uptime_percentage: 99.8,
+          error_rate: 0.02
+        },
+        document_types: {
+          governance: 450,
+          policy: 320,
+          meeting: 280,
+          notice: 200
+        },
+        user_activity: {
+          active_today: 25,
+          active_this_week: 89,
+          new_registrations: 5
+        }
+      },
+      personalStats: {
+        userId,
+        documentCount: 42,
+        templateCount: 8,
+        documentsCreatedThisWeek: 5,
+        documentsCreatedThisMonth: 18,
+        collaborationScore: 85,
+        productivityScore: 92.5,
+        recentDocuments: [
+          {
+            id: 'doc-1',
+            title: 'Board Meeting Minutes - September 2025',
+            updatedAt: new Date('2025-09-12T10:30:00Z'),
+            status: 'approved' as const,
+            type: 'meeting' as const
+          },
+          {
+            id: 'doc-2',
+            title: 'Community Guidelines Update',
+            updatedAt: new Date('2025-09-11T14:20:00Z'),
+            status: 'draft' as const,
+            type: 'policy' as const
+          },
+          {
+            id: 'doc-3',
+            title: 'Annual Budget Proposal',
+            updatedAt: new Date('2025-09-10T09:15:00Z'),
+            status: 'review' as const,
+            type: 'governance' as const
+          }
+        ],
+        documentsByType: {
+          meeting: 15,
+          policy: 12,
+          notice: 10,
+          governance: 5
+        },
+        workflowParticipation: {
+          approvals_completed: 25,
+          reviews_completed: 18,
+          tasks_assigned: 8,
+          tasks_completed: 6
+        },
+        activityTimeline: [
+          { date: '2025-09-12', documents: 2, collaborations: 1 },
+          { date: '2025-09-11', documents: 1, collaborations: 3 },
+          { date: '2025-09-10', documents: 3, collaborations: 2 },
+          { date: '2025-09-09', documents: 0, collaborations: 1 },
+          { date: '2025-09-08', documents: 1, collaborations: 0 }
+        ]
+      },
+      lastUpdated: new Date(),
+      performanceMetrics: {
+        coordination_time_ms: 150,
+        cache_hit_rate: 85
+      }
+    }
+
+    // Simulate async call
+    return Promise.resolve(mockData)
   }
 
   /**

@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { deviceService, type Breakpoint } from '../services/deviceService'
+import { deviceService, type Breakpoint, type DeviceType } from '../services/deviceService'
 
 interface DeviceDetectionState {
   isMobile: boolean
   isDesktop: boolean
+  deviceType: DeviceType
+  isTouchDevice: boolean
   breakpoint: Breakpoint
   windowWidth: number
   isBreakpointUp: (breakpoint: Breakpoint) => boolean
@@ -14,6 +16,8 @@ export const useDeviceDetection = (): DeviceDetectionState => {
   const [state, setState] = useState<Omit<DeviceDetectionState, 'isBreakpointUp' | 'isBreakpointDown'>>(() => ({
     isMobile: deviceService.isMobile(),
     isDesktop: deviceService.isDesktop(),
+    deviceType: deviceService.getDeviceType(),
+    isTouchDevice: deviceService.isTouchDevice(),
     breakpoint: deviceService.getBreakpoint(),
     windowWidth: window.innerWidth
   }))
@@ -22,6 +26,8 @@ export const useDeviceDetection = (): DeviceDetectionState => {
     setState({
       isMobile: deviceService.isMobile(),
       isDesktop: deviceService.isDesktop(),
+      deviceType: deviceService.getDeviceType(),
+      isTouchDevice: deviceService.isTouchDevice(),
       breakpoint: deviceService.getBreakpoint(),
       windowWidth: window.innerWidth
     })

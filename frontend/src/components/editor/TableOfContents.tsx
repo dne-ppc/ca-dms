@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { tocService, TOCHeader, TOCHierarchyItem } from '../../services/tocService'
+import { tocService } from '../../services/tocService'
+import type { TOCHeader, TOCHierarchyItem } from '../../services/tocService'
 
 interface TableOfContentsProps {
   content: string

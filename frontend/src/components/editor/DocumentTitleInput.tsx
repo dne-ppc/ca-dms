@@ -31,6 +31,13 @@ export const DocumentTitleInput: React.FC<DocumentTitleInputProps> = ({
     }, 0)
   }
 
+  const handleButtonKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleClick()
+    }
+  }
+
   const handleSubmit = () => {
     const trimmedValue = localValue.trim()
     if (trimmedValue && trimmedValue !== value) {
@@ -85,6 +92,7 @@ export const DocumentTitleInput: React.FC<DocumentTitleInputProps> = ({
     <button
       data-testid="document-title-input"
       onClick={handleClick}
+      onKeyDown={handleButtonKeyDown}
       className={`
         document-title-input display
         text-lg font-medium
@@ -95,6 +103,9 @@ export const DocumentTitleInput: React.FC<DocumentTitleInputProps> = ({
         px-3 py-2
         hover:bg-gray-50
         hover:border-gray-200
+        focus:outline-none
+        focus:ring-2
+        focus:ring-blue-500
         transition-colors
         ${className}
       `}

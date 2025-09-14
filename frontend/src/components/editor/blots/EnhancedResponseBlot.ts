@@ -1,5 +1,6 @@
 import Quill from 'quill';
-import { DraggablePlaceholderBlot, PlaceholderConfig } from './DraggablePlaceholderBlot';
+import { DraggablePlaceholderBlot } from './DraggablePlaceholderBlot';
+import type { PlaceholderConfig } from './DraggablePlaceholderBlot';
 import './EnhancedResponseBlot.css';
 
 export interface ResponseConfig extends PlaceholderConfig {

@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import { BarChart3, ChevronDown } from 'lucide-react'
+import { ReportingInterface } from './ReportingInterface'
 
 interface AdvancedReportingButtonProps {
   onReportClick?: (reportType: string) => void
   className?: string
+  useModal?: boolean
 }
 
 const reportTypes = [
@@ -17,9 +19,11 @@ const reportTypes = [
 
 export const AdvancedReportingButton: React.FC<AdvancedReportingButtonProps> = ({
   onReportClick,
-  className = ''
+  className = '',
+  useModal = true
 }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleReportSelect = (reportType: string) => {
     onReportClick?.(reportType)
@@ -27,7 +31,10 @@ export const AdvancedReportingButton: React.FC<AdvancedReportingButtonProps> = (
   }
 
   const handleMainClick = () => {
-    if (onReportClick) {
+    if (useModal) {
+      // Open reporting interface modal
+      setIsModalOpen(true)
+    } else if (onReportClick) {
       onReportClick('workflow-analytics')
     } else {
       // Fallback to opening dropdown
@@ -64,8 +71,8 @@ export const AdvancedReportingButton: React.FC<AdvancedReportingButtonProps> = (
         )}
       </button>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
+      {/* Dropdown Menu - Only show if not using modal */}
+      {!useModal && isOpen && (
         <>
           {/* Backdrop */}
           <div
@@ -94,6 +101,14 @@ export const AdvancedReportingButton: React.FC<AdvancedReportingButtonProps> = (
             </div>
           </div>
         </>
+      )}
+
+      {/* Reporting Interface Modal */}
+      {useModal && (
+        <ReportingInterface
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
       )}
     </div>
   )

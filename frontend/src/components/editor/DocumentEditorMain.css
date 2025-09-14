@@ -3,6 +3,13 @@
   min-height: 100vh;
 }
 
+.google-docs-layout {
+  min-height: 100vh;
+  background-color: #f9fbfd;
+  width: 100% !important;
+  font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
 .document-editor-main .enhanced-toolbar {
   width: 100%;
   border-bottom: 1px solid #e5e7eb;

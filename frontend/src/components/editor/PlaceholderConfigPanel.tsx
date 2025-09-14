@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, Save, RotateCcw, Download, Upload } from 'lucide-react';
-import { PlaceholderTemplate, PlaceholderTemplateManager } from './PlaceholderTemplates';
-import { PlaceholderConfig } from './blots/DraggablePlaceholderBlot';
-import { SignatureConfig } from './blots/EnhancedSignatureBlot';
+import { PlaceholderTemplateManager } from './PlaceholderTemplates';
+import type { PlaceholderTemplate } from './PlaceholderTemplates';
+import type { PlaceholderConfig } from './blots/DraggablePlaceholderBlot';
+import type { SignatureConfig } from './blots/EnhancedSignatureBlot';
 
 interface PlaceholderConfigPanelProps {
   isOpen: boolean;
@@ -13,13 +14,6 @@ interface PlaceholderConfigPanelProps {
   onTemplateSelect: (template: PlaceholderTemplate) => void;
 }
 
-interface ValidationRule {
-  required: boolean;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: string;
-  errorMessage?: string;
-}
 
 export const PlaceholderConfigPanel: React.FC<PlaceholderConfigPanelProps> = ({
   isOpen,

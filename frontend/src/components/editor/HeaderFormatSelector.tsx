@@ -47,6 +47,7 @@ export const HeaderFormatSelector: React.FC<HeaderFormatSelectorProps> = ({
         data-testid="header-format-selector"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label="Header format"
         className={`
           appearance-none
           bg-white

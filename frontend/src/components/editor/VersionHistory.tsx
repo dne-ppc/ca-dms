@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { versionService, DocumentVersion } from '../../services/versionService'
+import { versionService } from '../../services/versionService'
+import type { DocumentVersion } from '../../services/versionService'
 
 interface VersionHistoryProps {
   documentId: string

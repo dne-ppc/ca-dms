@@ -2,7 +2,10 @@
 .enhanced-quill-editor {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: 11.5in;
+  width: 8.5in;
+  /* min-width: 100%;
+  min-height: calc(11in - 40px); Full letter height minus padding */
   background: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -58,6 +61,9 @@
 .editor-container {
   position: relative;
   background: #ffffff;
+  height: 100%;
+  min-height: calc(11in - 40px); /* Full letter height minus padding */
+  flex: 1;
 }
 
 .quill-editor {
@@ -123,7 +129,8 @@
 
 .enhanced-quill-editor .ql-editor {
   padding: 20px;
-  min-height: 300px;
+  min-height: calc(11in - 40px); /* Full letter height minus padding */
+  height: 100%;
 }
 
 .enhanced-quill-editor .ql-editor.ql-blank::before {
